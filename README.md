@@ -18,12 +18,8 @@ The public site works with no secrets. `/api/checkout` needs `SUPABASE_SERVICE_R
 
 ### Admin access
 
-`/admin` uses magic-link login. After you sign in once, add yourself as staff from the Supabase SQL editor:
-
-```sql
-insert into staff (user_id, display_name)
-select id, 'Your Name' from auth.users where email = 'you@example.com';
-```
+`/admin` is protected by one shared password (ask the team). It signs in as a single
+staff account, `admin@grandmas-bakery.app`, so database permissions still apply.
 
 ## Layout
 
