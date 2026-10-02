@@ -1,15 +1,8 @@
 import { BAKERY } from "../lib/bakery";
-import { createContext, useContext, useState } from "react";
 import { Link, Outlet } from "react-router";
-import { I18nProvider, LANGUAGES, useI18n, type Lang } from "../i18n";
+import { LANGUAGES, useI18n, type Lang } from "../i18n";
 import { BunBunLogo } from "./illustrations";
-
-/** Cart count shared with the header badge. Home owns the cart and reports its size here. */
-const CartCountContext = createContext<{ count: number; setCount: (n: number) => void }>({
-  count: 0,
-  setCount: () => {},
-});
-export const useCartCount = () => useContext(CartCountContext);
+import { useCartCount } from "./RootLayout";
 
 function Header() {
   const { lang, setLang } = useI18n();
@@ -70,18 +63,13 @@ function Footer() {
 }
 
 export function PublicLayout() {
-  const [count, setCount] = useState(0);
   return (
-    <I18nProvider>
-      <CartCountContext.Provider value={{ count, setCount }}>
-        <div className="min-h-screen bg-flour">
-          <Header />
-          <main>
-            <Outlet />
-          </main>
-          <Footer />
-        </div>
-      </CartCountContext.Provider>
-    </I18nProvider>
+    <div className="min-h-screen bg-flour">
+      <Header />
+      <main>
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
   );
 }
