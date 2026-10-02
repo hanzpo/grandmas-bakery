@@ -1,31 +1,31 @@
-import { BAKERY, todaysHours } from "../lib/bakery";
+import { BAKERY, hoursSummary } from "../lib/bakery";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BunBun } from "../components/illustrations";
 import { ProductCard } from "../components/ProductCard";
-import { useCartCount } from "../components/PublicLayout";
+import { useCartCount } from "../components/RootLayout";
 import { CATEGORY_ART, productArt, titleCase } from "../components/public/productArt";
-import { CATEGORIES, CATEGORY_LABELS, localized, useI18n } from "../i18n";
+import { CATEGORIES, CATEGORY_LABELS, localized, useI18n, type MessageKey } from "../i18n";
 import { money } from "../lib/format";
 import { useMenu, type MenuItem } from "../lib/menu";
 
 const FEATURES = [
   {
-    title: "Made from scratch",
-    body: "Everything is baked in our kitchen each morning. No mixes, no shortcuts.",
+    title: "featScratchTitle",
+    body: "featScratchBody",
     tint: "bg-jam-soft text-jam",
     icon: <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />,
   },
   {
-    title: "Call or text any time",
-    body: "Our phone line takes orders day and night. Grandma calls you back for anything tricky.",
+    title: "featPhoneTitle",
+    body: "featPhoneBody",
     tint: "bg-blueberry-soft text-blueberry",
     icon: <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />,
   },
   {
-    title: "Quick pickup",
-    body: "Pick a time at checkout. Your order waits for you at the counter, still warm.",
+    title: "featPickupTitle",
+    body: "featPickupBody",
     tint: "bg-pistachio-soft text-pistachio-depth",
     icon: (
       <>
@@ -34,10 +34,10 @@ const FEATURES = [
       </>
     ),
   },
-];
+] satisfies { title: MessageKey; body: MessageKey; tint: string; icon: React.ReactNode }[];
 
 export default function Home() {
-  const { t, lang } = useI18n();
+  const { t, lang, locale } = useI18n();
   const menu = useMenu();
   const [params] = useSearchParams();
   const { setCount } = useCartCount();
@@ -153,7 +153,7 @@ export default function Home() {
         }),
       });
       const body = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !body.url) throw new Error(body.error ?? "Checkout failed");
+      if (!res.ok || !body.url) throw new Error(body.error ?? t("checkoutFailed"));
       return body.url;
     },
     onSuccess: (url) => location.assign(url),
@@ -166,19 +166,20 @@ export default function Home() {
       {/* Hero */}
       <section className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-10 px-4 pt-10 pb-10 sm:px-6 sm:pt-14">
         <div className="flex flex-[1_1_420px] flex-col gap-5">
-          <div className="flex items-center gap-2 self-start rounded-full bg-pistachio-soft px-3.5 py-2 text-sm font-black text-[#24692b]">
-            <span className="h-2.5 w-2.5 rounded-full bg-pistachio" />
-            {todaysHours()}
-          </div>
           <h1 className="text-[clamp(40px,6vw,64px)] leading-[1.02] font-black tracking-[-0.02em]">
-            Baked this morning,
+            {t("heroTitleTop")}
             <br />
-            <span className="text-jam">by Grandma.</span>
+            <span className="text-jam">{t("heroTitleBottom")}</span>
           </h1>
-          <p className="max-w-[480px] text-[19px] leading-normal font-bold text-cinnamon">{t("tagline")} Order online for pickup, or just call or text us.</p>
+          <p className="max-w-[480px] text-[19px] leading-normal font-bold text-cinnamon">{t("tagline")} {t("heroSub")}</p>
           <div className="flex flex-wrap gap-3">
             <a href="#menu" className="btn-primary h-14 px-7">{t("orderNow")}</a>
-            <a href={BAKERY.phoneHref} className="btn-ghost h-14 px-7">Call or text us</a>
+            <a href={BAKERY.phoneHref} aria-label={t("callAria", { phone: BAKERY.phone })} className="btn-ghost h-14 px-7 tracking-normal normal-case">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">
+                <path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" />
+              </svg>
+              {BAKERY.phone}
+            </a>
           </div>
         </div>
         <div className="relative flex flex-[1_1_360px] justify-center">
@@ -187,7 +188,7 @@ export default function Home() {
           </div>
           {featured && (
             <div className="absolute bottom-6 left-0 flex flex-col gap-0.5 rounded-[18px] border-2 border-b-4 border-crumb bg-white px-4 py-3">
-              <span className="text-xs font-black tracking-[0.1em] text-cinnamon uppercase">Just out of the oven</span>
+              <span className="text-xs font-black tracking-[0.1em] text-cinnamon uppercase">{t("justOut")}</span>
               <span className="text-[17px] font-black">{localized(featured, lang).name}</span>
             </div>
           )}
@@ -197,8 +198,8 @@ export default function Home() {
       {/* Menu + cart */}
       <section id="menu" className="mx-auto flex max-w-[1120px] scroll-mt-20 flex-col gap-5 px-4 pt-6 pb-14 sm:px-6">
         <div className="flex flex-col gap-1.5">
-          <span className="eyebrow">Fresh today</span>
-          <h2 className="text-[40px] leading-none font-black">The menu</h2>
+          <span className="eyebrow">{t("freshToday")}</span>
+          <h2 className="text-[40px] leading-none font-black">{t("theMenu")}</h2>
         </div>
         {params.get("cancelled") && (
           <div className="rounded-2xl border-2 border-b-4 border-butter bg-butter-soft px-4 py-3 font-extrabold text-[#6b4d00]">
@@ -254,7 +255,7 @@ export default function Home() {
                       <Icon className="h-9 w-9" />
                     </span>
                     <h3 id={`heading-${category}`} className="text-[28px] leading-none font-black">{sectionLabel(category)}</h3>
-                    <span className="ml-auto text-sm font-extrabold text-cinnamon">{products.length} {t("items")}</span>
+                    <span className="ml-auto text-sm font-extrabold text-cinnamon">{t("itemsCount", { count: products.length })}</span>
                   </div>
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 max-lg:grid-cols-1 max-lg:gap-3">
                     {products.map((item, i) => (
@@ -267,7 +268,7 @@ export default function Home() {
           </div>
 
           {sheetOpen && (
-            <button type="button" aria-label="Close order" className="fixed inset-0 z-40 bg-cocoa/40 lg:hidden" onClick={() => setSheetOpen(false)} />
+            <button type="button" aria-label={t("closeOrder")} className="fixed inset-0 z-40 bg-cocoa/40 lg:hidden" onClick={() => setSheetOpen(false)} />
           )}
           <aside
             id="cart"
@@ -282,10 +283,10 @@ export default function Home() {
             </div>
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-black">{t("yourOrder")}</h3>
-              <button type="button" aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full bg-dough text-lg font-black lg:hidden" onClick={() => setSheetOpen(false)}>×</button>
+              <button type="button" aria-label={t("close")} className="flex h-9 w-9 items-center justify-center rounded-full bg-dough text-lg font-black lg:hidden" onClick={() => setSheetOpen(false)}>×</button>
             </div>
             {lines.length === 0 ? (
-              <p className="mt-3 text-[15px] font-bold text-cinnamon">Nothing yet. Tap ADD on something tasty.</p>
+              <p className="mt-3 text-[15px] font-bold text-cinnamon">{t("emptyCart")}</p>
             ) : (
               <ul className="mt-3 space-y-2 border-b-2 border-crumb pb-3">
                 {lines.map((l) => (
@@ -297,13 +298,13 @@ export default function Home() {
               </ul>
             )}
             <div className="mt-3 flex justify-between text-lg font-black">
-              <span>Subtotal</span>
+              <span>{t("subtotal")}</span>
               <span>{money(total)}</span>
             </div>
 
             {step === "cart" ? (
               <button type="button" className="btn-primary mt-4 w-full" disabled={count === 0} onClick={() => setStep("details")}>
-                Checkout
+                {t("checkout")}
               </button>
             ) : (
               <form
@@ -315,12 +316,12 @@ export default function Home() {
               >
                 {(
                   [
-                    ["name", "text", true, "e.g. Rosa"],
-                    ["email", "email", true, "you@example.com"],
-                    ["phone", "tel", false, ""],
-                    ["pickup_at", "datetime-local", false, ""],
+                    ["name", "text", true, t("namePlaceholder"), "name"],
+                    ["email", "email", true, t("emailPlaceholder"), "email"],
+                    ["phone", "tel", false, "", "tel"],
+                    ["pickup_at", "datetime-local", false, "", "off"],
                   ] as const
-                ).map(([key, type, required, placeholder]) => (
+                ).map(([key, type, required, placeholder, autoComplete]) => (
                   <div key={key}>
                     <label className="label" htmlFor={key}>{t(key === "pickup_at" ? "pickup" : key)}</label>
                     <input
@@ -328,6 +329,7 @@ export default function Home() {
                       type={type}
                       required={required}
                       placeholder={placeholder}
+                      autoComplete={autoComplete}
                       className="input"
                       value={form[key]}
                       onChange={(e) => setForm({ ...form, [key]: e.target.value })}
@@ -348,10 +350,10 @@ export default function Home() {
                   {t("optIn")}
                 </label>
                 <button className="btn-primary w-full" disabled={checkout.isPending}>
-                  {checkout.isPending ? "One moment…" : `${t("pay")} · ${money(total)}`}
+                  {checkout.isPending ? t("oneMoment") : `${t("pay")} · ${money(total)}`}
                 </button>
                 <button type="button" className="w-full text-sm font-extrabold text-blueberry" onClick={() => setStep("cart")}>
-                  Back
+                  {t("back")}
                 </button>
                 {checkout.error && (
                   <p className="rounded-xl bg-jam-soft px-3 py-2 text-sm font-extrabold text-jam-depth">{checkout.error.message}</p>
@@ -387,8 +389,8 @@ export default function Home() {
                   {f.icon}
                 </svg>
               </div>
-              <h3 className="text-lg font-black">{f.title}</h3>
-              <p className="text-[15px] leading-snug font-bold text-cinnamon">{f.body}</p>
+              <h3 className="text-lg font-black">{t(f.title)}</h3>
+              <p className="text-[15px] leading-snug font-bold text-cinnamon">{t(f.body)}</p>
             </div>
           ))}
         </div>
@@ -397,20 +399,29 @@ export default function Home() {
       {/* Visit */}
       <section id="visit" className="mx-auto flex max-w-[1120px] scroll-mt-20 flex-wrap gap-10 px-4 py-14 sm:px-6">
         <div className="flex flex-[1_1_320px] flex-col gap-4">
-          <h2 className="text-[40px] leading-none font-black">Come say hi</h2>
-          {[
-            ["Address", BAKERY.address],
-            ["Hours", BAKERY.hoursSummary],
-            ["Call or text", BAKERY.phone],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <div className="eyebrow">{k}</div>
-              <div className="text-lg font-black">{v}</div>
-            </div>
-          ))}
+          <h2 className="text-[40px] leading-none font-black">{t("comeSayHi")}</h2>
+          <div>
+            <div className="eyebrow">{t("address")}</div>
+            <div className="text-lg font-black">{BAKERY.address}</div>
+          </div>
+          <div>
+            <div className="eyebrow">{t("hours")}</div>
+            <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-0.5 text-lg font-black">
+              {hoursSummary(locale, t("closed")).map((r) => (
+                <div key={r.days} className="contents">
+                  <dt className="text-cinnamon">{r.days}</dt>
+                  <dd>{r.time}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          <div>
+            <div className="eyebrow">{t("callOrText")}</div>
+            <a href={BAKERY.phoneHref} className="text-lg font-black text-blueberry">{BAKERY.phone}</a>
+          </div>
         </div>
         <iframe
-          title="Map to Grandma's Bakery"
+          title={t("mapTitle")}
           src={BAKERY.mapsEmbed}
           loading="lazy"
           className="min-h-[260px] flex-[1_1_420px] rounded-3xl border-2 border-crumb"

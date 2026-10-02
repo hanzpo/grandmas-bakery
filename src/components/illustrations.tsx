@@ -78,3 +78,24 @@ export const BananaBreadIcon = (props: P) => (
 export const MugIcon = (props: P) => (
   <svg {...props} viewBox="0 0 64 64" aria-hidden="true"><path d="M24 8c-3 4 3 6 0 10M34 8c-3 4 3 6 0 10" stroke="#D6C7B0" strokeWidth="3" fill="none" strokeLinecap="round" /><path d="M44 28h4a7 7 0 0 1 0 14h-4" stroke="#1B5598" strokeWidth="4.5" fill="none" /><path d="M12 24h34v18a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z" fill="#2672C9" /><ellipse cx="29" cy="24" rx="17" ry="4" fill="#6B3F2A" /><path d="M18 34h10" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.6" /></svg>
 );
+
+/** Grandma herself: silver bun with a jam flower, round glasses, rosy cheeks, pearl earrings. */
+export const Grandma = (props: P) => (
+  <svg {...props} viewBox="0 0 64 64" aria-hidden="true">
+    <circle cx="32" cy="11" r="8" fill="#DCD6E0" />
+    <circle cx="38" cy="7" r="3.2" fill="#D4335A" />
+    <circle cx="38" cy="7" r="1.2" fill="#FFC93C" />
+    <ellipse cx="32" cy="34" rx="22" ry="21" fill="#DCD6E0" />
+    <circle cx="32" cy="38" r="17" fill="#F6CFA8" />
+    <path d="M15 33 q4 -14 17 -14 q13 0 17 14 q-6 -8 -17 -8 q-11 0 -17 8z" fill="#EFEBF2" />
+    <circle cx="15.5" cy="42" r="2.2" fill="#FFFDF8" stroke="#D6C7B0" strokeWidth="1" />
+    <circle cx="48.5" cy="42" r="2.2" fill="#FFFDF8" stroke="#D6C7B0" strokeWidth="1" />
+    <ellipse cx="21.5" cy="45" rx="4" ry="2.6" fill="#F28C8C" opacity="0.75" />
+    <ellipse cx="42.5" cy="45" rx="4" ry="2.6" fill="#F28C8C" opacity="0.75" />
+    <circle cx="25" cy="38" r="5.5" fill="#FFFFFF" fillOpacity="0.35" stroke="#4A2E22" strokeWidth="2" />
+    <circle cx="39" cy="38" r="5.5" fill="#FFFFFF" fillOpacity="0.35" stroke="#4A2E22" strokeWidth="2" />
+    <path d="M30.5 38 h3" stroke="#4A2E22" strokeWidth="2" strokeLinecap="round" />
+    <path d="M22.5 38.5 q2.5 -2.5 5 0 M36.5 38.5 q2.5 -2.5 5 0" stroke="#4A2E22" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <path d="M27 47.5 q5 5 10 0" stroke="#4A2E22" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+  </svg>
+);

@@ -2,11 +2,12 @@ import { BAKERY } from "../lib/bakery";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
 import { BunBunHappy } from "../components/illustrations";
+import { useI18n } from "../i18n";
 
 const STEPS = [
-  { label: "Ordered", state: "done" },
-  { label: "Baking", state: "active" },
-  { label: "Ready", state: "todo" },
+  { label: "stepOrdered", state: "done" },
+  { label: "stepBaking", state: "active" },
+  { label: "stepReady", state: "todo" },
 ] as const;
 
 const STEP_STYLE = {
@@ -32,6 +33,7 @@ const ICONS = {
 };
 
 export default function OrderSuccess() {
+  const { t } = useI18n();
   // Paid: start the next visit with an empty cart.
   useEffect(() => {
     try {
@@ -46,11 +48,11 @@ export default function OrderSuccess() {
       <BunBunHappy className="mx-auto w-44" />
       <div>
         <h1 className="text-[32px] leading-tight font-black">
-          Your order is
+          {t("successTitleTop")}
           <br />
-          in the oven!
+          {t("successTitleBottom")}
         </h1>
-        <p className="mt-2 text-lg font-bold text-cinnamon">We'll have it warm and ready at pickup time.</p>
+        <p className="mt-2 text-lg font-bold text-cinnamon">{t("successBody")}</p>
       </div>
 
       <ol className="grid grid-cols-3 gap-2">
@@ -61,24 +63,24 @@ export default function OrderSuccess() {
                 {ICONS[s.state]}
               </svg>
             </span>
-            <span className={`text-sm font-black ${STEP_STYLE[s.state].text}`}>{s.label}</span>
+            <span className={`text-sm font-black ${STEP_STYLE[s.state].text}`}>{t(s.label)}</span>
           </li>
         ))}
       </ol>
 
       <div className="card p-5 text-left">
         <div className="flex items-center justify-between">
-          <span className="eyebrow">Order number</span>
+          <span className="eyebrow">{t("orderNumber")}</span>
           <span className="text-2xl font-black">{order ? `#${order}` : "—"}</span>
         </div>
         <p className="mt-3 border-t-2 border-crumb pt-3 text-[15px] font-bold text-cinnamon">
-          A receipt is on its way to your email. Show this number at the counter.
+          {t("receiptNote")}
         </p>
       </div>
 
       <div className="flex flex-col gap-3">
-        <Link to="/" className="btn-primary h-14 w-full">Got it</Link>
-        <a href={BAKERY.mapsLink} target="_blank" rel="noreferrer" className="btn-ghost h-14 w-full">Get directions</a>
+        <Link to="/" className="btn-primary h-14 w-full">{t("gotIt")}</Link>
+        <a href={BAKERY.mapsLink} target="_blank" rel="noreferrer" className="btn-ghost h-14 w-full">{t("directions")}</a>
       </div>
     </div>
   );

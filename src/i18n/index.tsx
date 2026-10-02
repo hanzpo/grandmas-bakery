@@ -1,121 +1,124 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { en, type Messages } from "./locales/en";
+import { es } from "./locales/es";
+import { fr } from "./locales/fr";
+import { ko } from "./locales/ko";
+import { pa } from "./locales/pa";
+import { tl } from "./locales/tl";
+import { vi } from "./locales/vi";
+import { zh } from "./locales/zh";
 
-export const LANGUAGES = { en: "English", es: "Español", zh: "中文" } as const;
+export const LANGUAGES = {
+  en: { native: "English", short: "EN" },
+  fr: { native: "Français", short: "FR" },
+  es: { native: "Español", short: "ES" },
+  zh: { native: "简体中文", short: "中文" },
+  ko: { native: "한국어", short: "한국어" },
+  vi: { native: "Tiếng Việt", short: "VI" },
+  pa: { native: "ਪੰਜਾਬੀ", short: "ਪੰ" },
+  tl: { native: "Tagalog", short: "TL" },
+} as const;
 export type Lang = keyof typeof LANGUAGES;
 
-const strings = {
-  en: {
-    tagline: "Handmade parfaits, layered with love.",
-    orderNow: "Order for pickup",
-    flavorOfMonth: "Flavor of the month",
-    contains: "Contains",
-    noAllergens: "No common allergens",
-    yourOrder: "Your order",
-    name: "Name",
-    email: "Email",
-    phone: "Phone (optional)",
-    pickup: "Pickup time",
-    notes: "Notes (allergies, requests)",
-    optIn: "Send me Grandma's specials & loyalty rewards",
-    pay: "Pay with card",
-    total: "Total",
-    thanks: "Thank you! Your order is in.",
-    thanksBody: "Grandma has your order. We'll have it ready at pickup time.",
-    backToMenu: "Back to menu",
-    add: "Add",
-    cancelled: "Checkout cancelled. Your cart is still here.",
-    menuSections: "Menu sections",
-    items: "items",
-    viewOrder: "View order",
-  },
-  es: {
-    tagline: "Parfaits hechos a mano, con mucho cariño.",
-    orderNow: "Pedir para recoger",
-    flavorOfMonth: "Sabor del mes",
-    contains: "Contiene",
-    noAllergens: "Sin alérgenos comunes",
-    yourOrder: "Tu pedido",
-    name: "Nombre",
-    email: "Correo",
-    phone: "Teléfono (opcional)",
-    pickup: "Hora de recogida",
-    notes: "Notas (alergias, peticiones)",
-    optIn: "Envíenme ofertas y recompensas de la abuela",
-    pay: "Pagar con tarjeta",
-    total: "Total",
-    thanks: "¡Gracias! Recibimos tu pedido.",
-    thanksBody: "La abuela tiene tu pedido. Estará listo a la hora de recogida.",
-    backToMenu: "Volver al menú",
-    add: "Añadir",
-    cancelled: "Pago cancelado. Tu carrito sigue aquí.",
-    menuSections: "Secciones del menú",
-    items: "artículos",
-    viewOrder: "Ver pedido",
-  },
-  zh: {
-    tagline: "手工制作的芭菲，层层都是爱。",
-    orderNow: "预订自取",
-    flavorOfMonth: "本月口味",
-    contains: "含有",
-    noAllergens: "不含常见过敏原",
-    yourOrder: "您的订单",
-    name: "姓名",
-    email: "电子邮件",
-    phone: "电话（可选）",
-    pickup: "取餐时间",
-    notes: "备注（过敏、要求）",
-    optIn: "给我发送奶奶的特惠和积分奖励",
-    pay: "刷卡支付",
-    total: "总计",
-    thanks: "谢谢！订单已收到。",
-    thanksBody: "奶奶已收到您的订单，取餐时会为您准备好。",
-    backToMenu: "返回菜单",
-    add: "添加",
-    cancelled: "已取消付款，购物车仍保留。",
-    menuSections: "菜单分类",
-    items: "件",
-    viewOrder: "查看订单",
-  },
-} satisfies Record<Lang, Record<string, string>>;
+const MESSAGES: Record<Lang, Messages> = { en, fr, es, zh, ko, vi, pa, tl };
+
+/** BCP 47 tag for Intl APIs and <html lang>. */
+export const INTL_LOCALE: Record<Lang, string> = {
+  en: "en-CA",
+  fr: "fr-CA",
+  es: "es",
+  zh: "zh-CN",
+  ko: "ko",
+  vi: "vi",
+  pa: "pa-Guru",
+  tl: "fil",
+};
+
+export type MessageKey = keyof Messages;
+type Vars = Record<string, string | number>;
+
+const fill = (template: string, vars?: Vars) =>
+  vars ? template.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m)) : template;
 
 export const ALLERGEN_LABELS: Record<Lang, Record<string, string>> = {
-  en: { dairy: "Dairy", gluten: "Gluten", nuts: "Nuts", egg: "Egg", soy: "Soy" },
-  es: { dairy: "Lácteos", gluten: "Gluten", nuts: "Frutos secos", egg: "Huevo", soy: "Soja" },
-  zh: { dairy: "乳制品", gluten: "麸质", nuts: "坚果", egg: "鸡蛋", soy: "大豆" },
+  en: { dairy: "Dairy", gluten: "Gluten", nuts: "Nuts", egg: "Egg", soy: "Soy", sesame: "Sesame" },
+  fr: { dairy: "Lait", gluten: "Gluten", nuts: "Noix", egg: "Œufs", soy: "Soya", sesame: "Sésame" },
+  es: { dairy: "Lácteos", gluten: "Gluten", nuts: "Frutos secos", egg: "Huevo", soy: "Soja", sesame: "Sésamo" },
+  zh: { dairy: "乳制品", gluten: "麸质", nuts: "坚果", egg: "鸡蛋", soy: "大豆", sesame: "芝麻" },
+  ko: { dairy: "유제품", gluten: "글루텐", nuts: "견과류", egg: "달걀", soy: "대두", sesame: "참깨" },
+  vi: { dairy: "Sữa", gluten: "Gluten", nuts: "Các loại hạt", egg: "Trứng", soy: "Đậu nành", sesame: "Mè" },
+  pa: { dairy: "ਡੇਅਰੀ", gluten: "ਗਲੂਟਨ", nuts: "ਗਿਰੀਆਂ", egg: "ਆਂਡਾ", soy: "ਸੋਇਆ", sesame: "ਤਿਲ" },
+  tl: { dairy: "Gatas", gluten: "Gluten", nuts: "Mani", egg: "Itlog", soy: "Soya", sesame: "Linga" },
 };
 
 /** Menu sections, in the order the customer menu shows them. Unknown categories go last. */
 export const CATEGORIES = ["parfait", "pastry", "bread", "cookie", "cake", "drink"] as const;
 
-export const CATEGORY_LABELS: Record<Lang, Record<string, string>> = {
-  en: { parfait: "Parfaits", pastry: "Pastries", bread: "Breads", cookie: "Cookies & Bars", cake: "Cakes & Pies", drink: "Drinks" },
-  es: { parfait: "Parfaits", pastry: "Bollería", bread: "Panes", cookie: "Galletas y barras", cake: "Pasteles y pays", drink: "Bebidas" },
-  zh: { parfait: "芭菲", pastry: "酥点", bread: "面包", cookie: "曲奇和甜点棒", cake: "蛋糕和派", drink: "饮品" },
+const CATEGORY_KEYS: Record<(typeof CATEGORIES)[number], MessageKey> = {
+  parfait: "catParfait",
+  pastry: "catPastry",
+  bread: "catBread",
+  cookie: "catCookie",
+  cake: "catCake",
+  drink: "catDrink",
 };
 
-type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (key: keyof (typeof strings)["en"]) => string };
+export const CATEGORY_LABELS = Object.fromEntries(
+  (Object.keys(MESSAGES) as Lang[]).map((l) => [
+    l,
+    Object.fromEntries(CATEGORIES.map((c) => [c, MESSAGES[l][CATEGORY_KEYS[c]]])),
+  ]),
+) as Record<Lang, Record<string, string>>;
+
+type Ctx = {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: MessageKey, vars?: Vars) => string;
+  locale: string;
+};
 const I18nContext = createContext<Ctx | null>(null);
+
+const isLang = (v: string | null | undefined): v is Lang => !!v && v in LANGUAGES;
 
 function initialLang(): Lang {
   try {
     const saved = localStorage.getItem("lang");
-    if (saved && saved in LANGUAGES) return saved as Lang;
+    if (isLang(saved)) return saved;
   } catch {}
-  const nav = navigator.language.slice(0, 2);
-  return nav in LANGUAGES ? (nav as Lang) : "en";
+  const preferred = typeof navigator === "undefined" ? [] : navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const tag of preferred) {
+    const base = tag.toLowerCase().split("-")[0];
+    if (base === "fil") return "tl";
+    if (isLang(base)) return base;
+  }
+  return "en";
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(initialLang);
-  const setLang = (l: Lang) => {
+
+  useEffect(() => {
+    document.documentElement.lang = INTL_LOCALE[lang];
+  }, [lang]);
+
+  const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
       localStorage.setItem("lang", l);
     } catch {}
-  };
-  return (
-    <I18nContext.Provider value={{ lang, setLang, t: (k) => strings[lang][k] }}>{children}</I18nContext.Provider>
+  }, []);
+
+  const value = useMemo<Ctx>(
+    () => ({
+      lang,
+      setLang,
+      locale: INTL_LOCALE[lang],
+      t: (key, vars) => fill(MESSAGES[lang][key] ?? en[key], vars),
+    }),
+    [lang, setLang],
   );
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {
