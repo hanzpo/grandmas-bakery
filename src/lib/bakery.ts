@@ -1,8 +1,8 @@
 // Shop details shown on the public site.
 export const BAKERY = {
   address: "280 Lester St, Waterloo, ON",
-  phone: "(519) 555-0142",
-  phoneHref: "tel:+15195550142",
+  phone: "(236) 242-3768",
+  phoneHref: "tel:+12362423768",
   mapsEmbed: "https://www.google.com/maps?q=280+Lester+St,+Waterloo,+ON&output=embed",
   mapsLink: "https://www.google.com/maps/search/?api=1&query=280+Lester+St,+Waterloo,+ON",
   // Index = Date.getDay() (0 = Sunday). null = closed.
