@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BunBun } from "../components/illustrations";
 import { ProductCard } from "../components/ProductCard";
-import { useCartCount } from "../components/PublicLayout";
+import { useCartCount } from "../components/RootLayout";
 import { CATEGORY_ART, productArt, titleCase } from "../components/public/productArt";
 import { CATEGORIES, CATEGORY_LABELS, localized, useI18n } from "../i18n";
 import { money } from "../lib/format";
