@@ -45,6 +45,8 @@ export default function Home() {
   const railRef = useRef<HTMLElement>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"cart" | "details">("cart");
+  // Phones/tablets: the cart opens as a bottom sheet instead of living at the end of the menu.
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", pickup_at: "", notes: "", marketing_opt_in: false });
 
   const items = menu.data ?? [];
@@ -66,6 +68,37 @@ export default function Home() {
   const total = lines.reduce((s, l) => s + l.product.price_cents * l.quantity, 0);
 
   useEffect(() => setCount(count), [count, setCount]);
+  // Back from a cancelled Stripe checkout on a phone: reopen the order sheet.
+  useEffect(() => {
+    if (params.get("cancelled") && count > 0 && !window.matchMedia("(min-width: 64rem)").matches) setSheetOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (count === 0) setSheetOpen(false);
+  }, [count]);
+  // The header's Cart button links to #cart; on phones that means "open the sheet".
+  useEffect(() => {
+    const open = () => {
+      if (location.hash === "#cart" && !window.matchMedia("(min-width: 64rem)").matches) {
+        setSheetOpen(true);
+        history.replaceState(null, "", location.pathname + location.search);
+      }
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, []);
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSheetOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [sheetOpen]);
   useEffect(() => {
     if (count === 0) setStep("cart");
   }, [count]);
@@ -207,7 +240,7 @@ export default function Home() {
 
           <div className="flex min-w-0 flex-col gap-10">
             {menu.isPending && (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 max-lg:grid-cols-1 max-lg:gap-3">
                 {Array.from({ length: 3 }, (_, i) => <div key={i} className="h-80 animate-pulse rounded-[22px] bg-dough" />)}
               </div>
             )}
@@ -222,7 +255,7 @@ export default function Home() {
                     <h3 id={`heading-${category}`} className="text-[28px] leading-none font-black">{sectionLabel(category)}</h3>
                     <span className="ml-auto text-sm font-extrabold text-cinnamon">{products.length} {t("items")}</span>
                   </div>
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4 max-lg:grid-cols-1 max-lg:gap-3">
                     {products.map((item, i) => (
                       <ProductCard key={item.id} item={item} index={i} quantity={cart[item.id] ?? 0} onChange={(q) => setQty(item.id, q)} />
                     ))}
@@ -232,8 +265,24 @@ export default function Home() {
             })}
           </div>
 
-          <aside id="cart" className="card scroll-mt-24 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
-            <h3 className="text-xl font-black">{t("yourOrder")}</h3>
+          {sheetOpen && (
+            <button type="button" aria-label="Close order" className="fixed inset-0 z-40 bg-cocoa/40 lg:hidden" onClick={() => setSheetOpen(false)} />
+          )}
+          <aside
+            id="cart"
+            className={`card scroll-mt-24 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto ${
+              sheetOpen
+                ? "max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-50 max-lg:max-h-[88dvh] max-lg:overflow-y-auto max-lg:rounded-b-none max-lg:border-b-0 max-lg:pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                : "max-lg:hidden"
+            }`}
+          >
+            <div className="mb-3 flex items-center justify-between lg:hidden">
+              <span className="mx-auto h-1.5 w-12 rounded-full bg-crumb" />
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-black">{t("yourOrder")}</h3>
+              <button type="button" aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-full bg-dough text-lg font-black lg:hidden" onClick={() => setSheetOpen(false)}>×</button>
+            </div>
             {lines.length === 0 ? (
               <p className="mt-3 text-[15px] font-bold text-cinnamon">Nothing yet. Tap ADD on something tasty.</p>
             ) : (
@@ -315,13 +364,14 @@ export default function Home() {
         {count > 0 && (
           <>
             <div className="h-16 lg:hidden" />
-            <a
-              href="#cart"
-              className="btn-primary fixed inset-x-4 bottom-4 z-30 h-14 justify-between px-5 lg:hidden"
+            <button
+              type="button"
+              className="btn-primary fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 h-14 justify-between px-5 lg:hidden"
+              onClick={() => setSheetOpen(true)}
             >
               <span>{t("viewOrder")} · {count}</span>
               <span>{money(total)}</span>
-            </a>
+            </button>
           </>
         )}
       </section>
