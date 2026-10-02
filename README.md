@@ -3,6 +3,8 @@
 CRM for a one-woman parfait shop: online ordering (Stripe), a live order queue, order and
 ingredient ledgers, recipe costing, customers/loyalty and a marketing dashboard.
 
+**Live:** https://getgrandma.com (admin at `/admin`)
+
 **Stack:** React 19 + Vite + Tailwind v4 (SPA) · Hono API on a Cloudflare Worker (same deploy) · Supabase (Postgres, auth, realtime)
 
 ## Getting started
