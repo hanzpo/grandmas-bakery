@@ -1,0 +1,96 @@
+// Source of truth for public-site copy. Every other locale must have the same keys.
+// Placeholders like {count} are filled by t("key", { count }).
+export const en = {
+  // Header & footer
+  siteNav: "Site",
+  homeAria: "Grandma's Bakery home",
+  navMenu: "Menu",
+  navVisit: "Visit",
+  language: "Language",
+  cart: "Cart",
+  cartAria: "Cart, {count} items",
+  footerTagline: "Made with butter and love",
+
+  // Hero
+  heroTitleTop: "Baked this morning,",
+  heroTitleBottom: "by Grandma.",
+  tagline: "Handmade parfaits, layered with love.",
+  heroSub: "Order online for pickup, or just call or text us.",
+  orderNow: "Order for pickup",
+  callAria: "Call or text us at {phone}",
+  justOut: "Just out of the oven",
+
+  // Menu
+  freshToday: "Fresh today",
+  theMenu: "The menu",
+  menuSections: "Menu sections",
+  itemsCount: "{count} items",
+  cancelled: "Checkout cancelled. Your cart is still here.",
+  catParfait: "Parfaits",
+  catPastry: "Pastries",
+  catBread: "Breads",
+  catCookie: "Cookies & Bars",
+  catCake: "Cakes & Pies",
+  catDrink: "Drinks",
+
+  // Product card
+  contains: "Contains",
+  noAllergens: "No common allergens",
+  add: "Add",
+  addItem: "Add {name}",
+  addOne: "Add one",
+  removeOne: "Remove one",
+  inCart: "{count} in cart",
+  grandmasPick: "Grandma's pick",
+
+  // Cart & checkout
+  yourOrder: "Your order",
+  emptyCart: "Nothing yet. Tap ADD on something tasty.",
+  subtotal: "Subtotal",
+  checkout: "Checkout",
+  viewOrder: "View order",
+  close: "Close",
+  closeOrder: "Close order",
+  name: "Name",
+  namePlaceholder: "e.g. Rosa",
+  email: "Email",
+  emailPlaceholder: "you@example.com",
+  phone: "Phone (optional)",
+  pickup: "Pickup time",
+  notes: "Notes (allergies, requests)",
+  optIn: "Send me Grandma's specials & loyalty rewards",
+  pay: "Pay with card",
+  oneMoment: "One moment…",
+  back: "Back",
+  checkoutFailed: "Checkout failed. Please try again.",
+
+  // Features
+  featScratchTitle: "Made from scratch",
+  featScratchBody: "Everything is baked in our kitchen each morning. No mixes, no shortcuts.",
+  featPhoneTitle: "Call or text any time",
+  featPhoneBody: "Our phone line takes orders day and night. Grandma calls you back for anything tricky.",
+  featPickupTitle: "Quick pickup",
+  featPickupBody: "Pick a time at checkout. Your order waits for you at the counter, still warm.",
+
+  // Visit
+  comeSayHi: "Come say hi",
+  address: "Address",
+  hours: "Hours",
+  callOrText: "Call or text",
+  closed: "Closed",
+  mapTitle: "Map to Grandma's Bakery",
+
+  // Order confirmation
+  successTitleTop: "Your order is",
+  successTitleBottom: "in the oven!",
+  successBody: "We'll have it warm and ready at pickup time.",
+  stepOrdered: "Ordered",
+  stepBaking: "Baking",
+  stepReady: "Ready",
+  orderNumber: "Order number",
+  receiptNote: "A receipt is on its way to your email. Show this number at the counter.",
+  gotIt: "Got it",
+  directions: "Get directions",
+};
+
+export type Messages = typeof en;
