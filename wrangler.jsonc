@@ -5,6 +5,9 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Keep the workers.dev URL alive alongside the custom domains: the Stripe webhook
+  // and the ElevenLabs agent call it.
+  "workers_dev": true,
   "routes": [
     { "pattern": "getgrandma.com", "custom_domain": true },
     { "pattern": "www.getgrandma.com", "custom_domain": true }
