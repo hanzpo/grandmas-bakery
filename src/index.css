@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Warm, high-contrast palette with big touch targets: built for grandma on a tablet. */
+@theme {
+  --color-cream: #faf3e7;
+  --color-crust: #f1e2c7;
+  --color-terracotta: #c2603a;
+  --color-terracotta-dark: #9c4526;
+  --color-berry: #c8343a;
+  --color-sage: #6b8f4e;
+  --color-ink: #2b1d14;
+  --color-muted: #7a6656;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+}
+
+h1, h2, h3 {
+  @apply font-display;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold transition disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-terracotta text-white hover:bg-terracotta-dark;
+}
+@utility btn-ghost {
+  @apply btn border border-crust bg-white hover:bg-crust;
+}
+@utility card {
+  @apply rounded-2xl border border-crust bg-white p-5 shadow-sm;
+}
+@utility input {
+  @apply w-full rounded-xl border border-crust bg-white px-4 py-3 text-base outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-muted;
+}
+
+@layer components {
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table th {
+    @apply border-b border-crust px-3 py-2 font-medium text-muted;
+  }
+  .table td {
+    @apply border-b border-crust/60 px-3 py-3;
+  }
+}
