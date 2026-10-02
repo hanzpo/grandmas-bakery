@@ -5,4 +5,10 @@ interface Env {
   STRIPE_WEBHOOK_SECRET: string;
   /** Shared with the ElevenLabs place_order webhook. Rejects the call when unset. */
   ELEVENLABS_TOOL_SECRET?: string;
+  /** Outbound grocery calls fail closed when this secret is unset. */
+  ELEVENLABS_API_KEY?: string;
+  /** Grocery agent id. Wrangler var, not a secret. */
+  SUPPLY_AGENT_ID?: string;
+  /** Bakery caller id for outbound grocery calls. Wrangler var, not a secret. */
+  SUPPLY_PHONE_NUMBER_ID?: string;
 }

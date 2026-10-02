@@ -44,6 +44,7 @@ export default function Inventory() {
       {tab === "stock" && (
         <>
           <Alerts />
+          <GroceryCalls />
           <IngredientTable />
           <div className="grid gap-6 lg:grid-cols-2">
             <LogTransactionForm />
@@ -61,6 +62,181 @@ export default function Inventory() {
       )}
     </div>
   );
+}
+
+const RUN_LABEL: Record<string, string> = {
+  quoting: "Asking for prices",
+  ordering: "Placing the order",
+  placed: "Order placed",
+  failed: "Not placed",
+};
+const CALL_LABEL: Record<string, string> = {
+  pending: "Waiting",
+  dialing: "On the phone",
+  quoted: "Quoted",
+  ordered: "Ordered",
+  failed: "Failed",
+  skipped: "Skipped",
+};
+
+type GroceryCall = {
+  id: string;
+  supplier_name: string | null;
+  purpose: string;
+  status: string;
+  error: string | null;
+};
+type GroceryRun = {
+  id: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  calls: GroceryCall[];
+};
+type ReclaimResponse = {
+  started: boolean;
+  reason: string | null;
+  run: GroceryRun | null;
+};
+
+function GroceryCalls() {
+  const qc = useQueryClient();
+  const settings = useQuery({
+    queryKey: ["supply_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("supply_settings").select("polling_enabled").eq("id", 1).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const latest = useQuery({
+    queryKey: ["supply_runs", "latest"],
+    queryFn: async () => {
+      const { data: run, error } = await supabase
+        .from("supply_runs")
+        .select("id, status, notes, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!run) return null;
+      const { data: calls, error: callError } = await supabase
+        .from("supply_calls")
+        .select("id, supplier_id, purpose, status, error, suppliers(name)")
+        .eq("run_id", run.id)
+        .order("created_at");
+      if (callError) throw callError;
+      return {
+        ...run,
+        calls: calls.map((call) => ({
+          id: call.id,
+          purpose: call.purpose,
+          status: call.status,
+          error: call.error,
+          supplier_name: supplierLabel(call.suppliers),
+        })),
+      };
+    },
+  });
+
+  const pollingOn = settings.data?.polling_enabled === true;
+  const toggle = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("supply_settings")
+        .update({ polling_enabled: !pollingOn, updated_at: new Date().toISOString() })
+        .eq("id", 1);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["supply_settings"] }),
+  });
+  const reclaim = useMutation({
+    mutationFn: async () => {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Sign in again to reclaim low stock.");
+      const res = await fetch("/api/supply/reclaim", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as Partial<ReclaimResponse> & { error?: string };
+      if (!res.ok) throw new Error(body.error || "Reclaim failed.");
+      return body as ReclaimResponse;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["supply_runs"] }),
+  });
+
+  return (
+    <section className="card space-y-4">
+      <div>
+        <p className="eyebrow">Grocery calls</p>
+        <h2 className="text-xl font-extrabold">Call stores for low stock</h2>
+        <p className="mt-1 text-sm text-cinnamon">
+          Grandma asks each store for prices, then orders the whole list from the cheapest store that can fill it. Turning
+          polling on only saves the switch. Nothing calls stores on a timer.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={pollingOn ? "btn-butter" : "btn-ghost"}
+          disabled={settings.isLoading || toggle.isPending}
+          onClick={() => toggle.mutate()}
+        >
+          {settings.isLoading ? "Polling…" : pollingOn ? "Polling on" : "Polling off"}
+        </button>
+        <button type="button" className="btn-primary" disabled={reclaim.isPending} onClick={() => reclaim.mutate()}>
+          {reclaim.isPending ? "Starting…" : "Reclaim low stock"}
+        </button>
+      </div>
+      {settings.error && <p className="text-jam">{(settings.error as Error).message}</p>}
+      {toggle.error && <p className="text-jam">{(toggle.error as Error).message}</p>}
+      {reclaim.error && <p className="text-jam">{(reclaim.error as Error).message}</p>}
+      {reclaim.data && <p className="font-bold">{reclaimMessage(reclaim.data)}</p>}
+      {latest.isLoading ? (
+        <p className="text-cinnamon">Loading the latest grocery run…</p>
+      ) : latest.error ? (
+        <p className="text-jam">{(latest.error as Error).message}</p>
+      ) : latest.data ? (
+        <div>
+          <p className="font-extrabold">
+            Latest run · {RUN_LABEL[latest.data.status] ?? latest.data.status}
+            <span className="ml-2 text-sm font-bold text-cinnamon">{dateTime(latest.data.created_at)}</span>
+          </p>
+          {latest.data.notes && <p className="mt-1 text-sm text-cinnamon">{latest.data.notes}</p>}
+          <ul className="mt-2 space-y-1">
+            {latest.data.calls.map((call) => (
+              <li key={call.id} className="text-sm">
+                <span className="font-extrabold">{call.supplier_name ?? "Store"}</span>
+                <span className="text-cinnamon">
+                  {" "}
+                  · {call.purpose === "order" ? "Order call" : "Price call"} · {CALL_LABEL[call.status] ?? call.status}
+                </span>
+                {call.error && <span className="text-jam"> — {call.error}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-cinnamon">No grocery runs yet.</p>
+      )}
+    </section>
+  );
+}
+
+function supplierLabel(suppliers: { name: string } | { name: string }[] | null) {
+  if (!suppliers) return null;
+  return Array.isArray(suppliers) ? (suppliers[0]?.name ?? null) : suppliers.name;
+}
+
+function reclaimMessage(result: ReclaimResponse) {
+  if (!result.started && result.reason === "nothing low") return "Nothing is at or below its reorder point.";
+  if (!result.started && result.reason === "already in progress") return "A grocery run is already in progress.";
+  if (result.started && result.run?.status === "failed") {
+    return result.run.notes || "The run failed before an order was placed.";
+  }
+  if (result.started) return "Started. Grandma is calling stores that have a dialable number.";
+  return result.reason || "Nothing happened.";
 }
 
 function Alerts() {
