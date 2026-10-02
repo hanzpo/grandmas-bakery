@@ -15,6 +15,8 @@ export const BAKERY = {
     [7, 19],
     [7, 17],
   ] as ([number, number] | null)[],
+  // ElevenLabs agent behind the Bun-bun chat. Agent ids are public (the browser connects with it directly).
+  voiceAgentId: "agent_5001m3zc4jajftt9zy1y4y1b9fa7",
 };
 
 // Monday-first week for display.

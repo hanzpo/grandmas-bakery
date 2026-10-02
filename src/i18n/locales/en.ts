@@ -91,6 +91,23 @@ export const en = {
   receiptNote: "A receipt is on its way to your email. Show this number at the counter.",
   gotIt: "Got it",
   directions: "Get directions",
+  chatOpen: "Ask Grandma",
+  chatTitle: "Grandma",
+  chatSubtitle: "Ask me about the menu, or order for pickup.",
+  chatPlaceholder: "Type a message…",
+  chatSend: "Send",
+  chatClose: "Close chat",
+  chatTalk: "Call Grandma",
+  chatHangUp: "Hang up",
+  chatConnecting: "Connecting",
+  chatListening: "Listening",
+  chatSpeaking: "Talking",
+  chatThinking: "Grandma is typing",
+  chatEmpty: "Hello, dear! Come in, come in. Ask me what's fresh today, or tell me what you'd like to pick up.",
+  chatError: "Oh dear, I couldn't hear you. Please try again, or call the bakery.",
+  chatSuggestMenu: "What's on the menu?",
+  chatSuggestHours: "When are you open?",
+  chatSuggestAllergens: "Anything nut-free?",
 };
 
 export type Messages = typeof en;

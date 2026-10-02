@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider, useRouteError } from "react-router
 import "./index.css";
 import { AdminLayout } from "./components/AdminLayout";
 import { PublicLayout } from "./components/PublicLayout";
+import { RootLayout } from "./components/RootLayout";
 import Login from "./pages/admin/Login";
 import Home from "./pages/Home";
 import Order from "./pages/Order";
@@ -37,27 +38,33 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30
 
 const router = createBrowserRouter([
   {
-    element: <PublicLayout />,
+    element: <RootLayout />,
     errorElement: <RouteError />,
     children: [
-      { path: "/", element: <Home /> },
-      { path: "/order", element: <Order /> },
-      { path: "/order/success", element: <OrderSuccess /> },
-    ],
-  },
-  { path: "/admin/login", element: <Login /> },
-  {
-    path: "/admin",
-    element: <AdminLayout />,
-    errorElement: <RouteError />,
-    children: [
-      { index: true, lazy: admin(() => import("./pages/admin/Overview")) },
-      { path: "queue", lazy: admin(() => import("./pages/admin/Queue")) },
-      { path: "orders", lazy: admin(() => import("./pages/admin/Orders")) },
-      { path: "inventory", lazy: admin(() => import("./pages/admin/Inventory")) },
-      { path: "menu", lazy: admin(() => import("./pages/admin/Menu")) },
-      { path: "customers", lazy: admin(() => import("./pages/admin/Customers")) },
-      { path: "marketing", lazy: admin(() => import("./pages/admin/Marketing")) },
+      {
+        element: <PublicLayout />,
+        errorElement: <RouteError />,
+        children: [
+          { path: "/", element: <Home /> },
+          { path: "/order", element: <Order /> },
+          { path: "/order/success", element: <OrderSuccess /> },
+        ],
+      },
+      { path: "/admin/login", element: <Login /> },
+      {
+        path: "/admin",
+        element: <AdminLayout />,
+        errorElement: <RouteError />,
+        children: [
+          { index: true, lazy: admin(() => import("./pages/admin/Overview")) },
+          { path: "queue", lazy: admin(() => import("./pages/admin/Queue")) },
+          { path: "orders", lazy: admin(() => import("./pages/admin/Orders")) },
+          { path: "inventory", lazy: admin(() => import("./pages/admin/Inventory")) },
+          { path: "menu", lazy: admin(() => import("./pages/admin/Menu")) },
+          { path: "customers", lazy: admin(() => import("./pages/admin/Customers")) },
+          { path: "marketing", lazy: admin(() => import("./pages/admin/Marketing")) },
+        ],
+      },
     ],
   },
 ]);
