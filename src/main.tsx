@@ -51,7 +51,8 @@ const router = createBrowserRouter([
     element: <AdminLayout />,
     errorElement: <RouteError />,
     children: [
-      { index: true, lazy: admin(() => import("./pages/admin/Queue")) },
+      { index: true, lazy: admin(() => import("./pages/admin/Overview")) },
+      { path: "queue", lazy: admin(() => import("./pages/admin/Queue")) },
       { path: "orders", lazy: admin(() => import("./pages/admin/Orders")) },
       { path: "inventory", lazy: admin(() => import("./pages/admin/Inventory")) },
       { path: "menu", lazy: admin(() => import("./pages/admin/Menu")) },
