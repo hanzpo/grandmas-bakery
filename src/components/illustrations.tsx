@@ -74,3 +74,7 @@ export const PieIcon = (props: P) => (
 export const BananaBreadIcon = (props: P) => (
   <svg {...props} viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="22" width="48" height="30" rx="8" fill="#B9773A" /><rect x="8" y="22" width="48" height="10" rx="5" fill="#9A5F2B" /><path d="M20 26c8 6 18 6 26 0" stroke="#FFC93C" strokeWidth="5" fill="none" strokeLinecap="round" /></svg>
 );
+
+export const MugIcon = (props: P) => (
+  <svg {...props} viewBox="0 0 64 64" aria-hidden="true"><path d="M24 8c-3 4 3 6 0 10M34 8c-3 4 3 6 0 10" stroke="#D6C7B0" strokeWidth="3" fill="none" strokeLinecap="round" /><path d="M44 28h4a7 7 0 0 1 0 14h-4" stroke="#1B5598" strokeWidth="4.5" fill="none" /><path d="M12 24h34v18a12 12 0 0 1-12 12h-10a12 12 0 0 1-12-12z" fill="#2672C9" /><ellipse cx="29" cy="24" rx="17" ry="4" fill="#6B3F2A" /><path d="M18 34h10" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.6" /></svg>
+);

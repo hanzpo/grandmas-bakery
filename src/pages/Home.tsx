@@ -1,12 +1,12 @@
 import { BAKERY, todaysHours } from "../lib/bakery";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { BunBun } from "../components/illustrations";
 import { ProductCard } from "../components/ProductCard";
 import { useCartCount } from "../components/PublicLayout";
-import { titleCase } from "../components/public/productArt";
-import { localized, useI18n } from "../i18n";
+import { CATEGORY_ART, productArt, titleCase } from "../components/public/productArt";
+import { CATEGORIES, CATEGORY_LABELS, localized, useI18n } from "../i18n";
 import { money } from "../lib/format";
 import { useMenu, type MenuItem } from "../lib/menu";
 
@@ -41,14 +41,26 @@ export default function Home() {
   const menu = useMenu();
   const [params] = useSearchParams();
   const { setCount } = useCartCount();
-  const [category, setCategory] = useState("all");
+  const [active, setActive] = useState("");
+  const railRef = useRef<HTMLElement>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"cart" | "details">("cart");
   const [form, setForm] = useState({ name: "", email: "", phone: "", pickup_at: "", notes: "", marketing_opt_in: false });
 
   const items = menu.data ?? [];
-  const categories = useMemo(() => ["all", ...new Set(items.map((p) => p.category))], [items]);
-  const shown = category === "all" ? items : items.filter((p) => p.category === category);
+  // Kiosk sections: known categories in menu order, anything new after them.
+  const sections = useMemo(() => {
+    const rank = (c: string) => {
+      const i = (CATEGORIES as readonly string[]).indexOf(c);
+      return i === -1 ? CATEGORIES.length : i;
+    };
+    const groups = new Map<string, MenuItem[]>();
+    for (const p of items) groups.set(p.category, [...(groups.get(p.category) ?? []), p]);
+    return [...groups]
+      .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+      .map(([category, products]) => ({ category, products }));
+  }, [items]);
+  const sectionLabel = (c: string) => CATEGORY_LABELS[lang][c] ?? titleCase(c);
   const lines = items.filter((p) => cart[p.id]).map((p) => ({ product: p, quantity: cart[p.id] }));
   const count = lines.reduce((s, l) => s + l.quantity, 0);
   const total = lines.reduce((s, l) => s + l.product.price_cents * l.quantity, 0);
@@ -57,6 +69,40 @@ export default function Home() {
   useEffect(() => {
     if (count === 0) setStep("cart");
   }, [count]);
+
+  // Highlight the section being read: the last one whose top has passed the sticky header (+ tab bar on phones).
+  useEffect(() => {
+    const onScroll = () => {
+      const offset = window.innerWidth >= 1024 ? 120 : 180;
+      let current = sections[0]?.category ?? "";
+      for (const { category } of sections) {
+        const el = document.getElementById(`section-${category}`);
+        if (el && el.getBoundingClientRect().top <= offset) current = category;
+      }
+      setActive(current);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [sections]);
+
+  // Keep the active tab visible in the phone tab bar (scrolls the bar only, not the page).
+  useEffect(() => {
+    const rail = railRef.current;
+    const tab = rail?.querySelector<HTMLElement>(`[data-section="${active}"]`);
+    if (rail && tab && rail.scrollWidth > rail.clientWidth) {
+      rail.scrollTo({ left: tab.offsetLeft - rail.clientWidth / 2 + tab.offsetWidth / 2, behavior: "smooth" });
+    }
+  }, [active]);
+
+  const jumpTo = (category: string) => {
+    setActive(category);
+    document.getElementById(`section-${category}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const setQty = (id: string, q: number) => setCart(({ [id]: _, ...rest }) => (q > 0 ? { ...rest, [id]: q } : rest));
 
@@ -116,26 +162,9 @@ export default function Home() {
 
       {/* Menu + cart */}
       <section id="menu" className="mx-auto flex max-w-[1120px] scroll-mt-20 flex-col gap-5 px-4 pt-6 pb-14 sm:px-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="eyebrow">Fresh today</span>
-            <h2 className="text-[40px] leading-none font-black">The menu</h2>
-          </div>
-          {categories.length > 2 && (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-pressed={category === c}
-                  className={category === c ? "chip-active h-11" : "chip h-11"}
-                  onClick={() => setCategory(c)}
-                >
-                  {c === "all" ? "All" : titleCase(c)}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="flex flex-col gap-1.5">
+          <span className="eyebrow">Fresh today</span>
+          <h2 className="text-[40px] leading-none font-black">The menu</h2>
         </div>
         {params.get("cancelled") && (
           <div className="rounded-2xl border-2 border-b-4 border-butter bg-butter-soft px-4 py-3 font-extrabold text-[#6b4d00]">
@@ -143,16 +172,67 @@ export default function Home() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-start gap-6">
-          <div className="grid min-w-0 flex-[999_1_520px] grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-4">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)_300px] lg:items-start">
+          {/* Section rail: a sticky tab bar on phones, a sticky sidebar on large screens */}
+          <nav
+            ref={railRef}
+            aria-label={t("menuSections")}
+            className="sticky top-[70px] z-20 -mx-4 flex gap-2 overflow-x-auto border-b-2 border-crumb bg-flour px-4 py-3 sm:-mx-6 sm:px-6 lg:top-24 lg:mx-0 lg:flex-col lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0"
+          >
             {menu.isPending &&
-              Array.from({ length: 3 }, (_, i) => <div key={i} className="h-80 animate-pulse rounded-[22px] bg-dough" />)}
-            {shown.map((item, i) => (
-              <ProductCard key={item.id} item={item} index={i} quantity={cart[item.id] ?? 0} onChange={(q) => setQty(item.id, q)} />
-            ))}
+              Array.from({ length: 4 }, (_, i) => <div key={i} className="h-12 w-32 shrink-0 animate-pulse rounded-2xl bg-dough lg:h-16 lg:w-full" />)}
+            {sections.map(({ category, products }) => {
+              const { Icon, tint } = CATEGORY_ART[category] ?? productArt(products[0]);
+              const on = active === category;
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  data-section={category}
+                  aria-current={on ? "true" : undefined}
+                  onClick={() => jumpTo(category)}
+                  className={`flex h-12 shrink-0 items-center gap-2 rounded-2xl border-2 border-b-4 pr-4 pl-1.5 text-left font-black whitespace-nowrap lg:h-16 lg:w-full lg:gap-3 lg:pr-3 ${
+                    on ? "border-blueberry bg-blueberry-soft text-blueberry-depth" : "border-crumb bg-white text-cocoa"
+                  }`}
+                >
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl lg:h-11 lg:w-11 ${tint}`}>
+                    <Icon className="h-6 w-6 lg:h-8 lg:w-8" />
+                  </span>
+                  <span className="lg:flex-1 lg:text-[17px] lg:whitespace-normal">{sectionLabel(category)}</span>
+                  <span className="hidden text-sm font-extrabold text-cinnamon lg:inline">{products.length}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="flex min-w-0 flex-col gap-10">
+            {menu.isPending && (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
+                {Array.from({ length: 3 }, (_, i) => <div key={i} className="h-80 animate-pulse rounded-[22px] bg-dough" />)}
+              </div>
+            )}
+            {sections.map(({ category, products }) => {
+              const { Icon, tint } = CATEGORY_ART[category] ?? productArt(products[0]);
+              return (
+                <section key={category} id={`section-${category}`} aria-labelledby={`heading-${category}`} className="scroll-mt-40 lg:scroll-mt-24">
+                  <div className="mb-4 flex items-center gap-3 border-b-2 border-crumb pb-3">
+                    <span className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tint}`}>
+                      <Icon className="h-9 w-9" />
+                    </span>
+                    <h3 id={`heading-${category}`} className="text-[28px] leading-none font-black">{sectionLabel(category)}</h3>
+                    <span className="ml-auto text-sm font-extrabold text-cinnamon">{products.length} {t("items")}</span>
+                  </div>
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-4">
+                    {products.map((item, i) => (
+                      <ProductCard key={item.id} item={item} index={i} quantity={cart[item.id] ?? 0} onChange={(q) => setQty(item.id, q)} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
 
-          <aside id="cart" className="card flex-[1_1_280px] scroll-mt-24 p-5 lg:sticky lg:top-24">
+          <aside id="cart" className="card scroll-mt-24 p-5 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
             <h3 className="text-xl font-black">{t("yourOrder")}</h3>
             {lines.length === 0 ? (
               <p className="mt-3 text-[15px] font-bold text-cinnamon">Nothing yet. Tap ADD on something tasty.</p>
@@ -230,6 +310,20 @@ export default function Home() {
             )}
           </aside>
         </div>
+
+        {/* Phones and tablets: the cart sits below a long menu, so keep a shortcut to it on screen. */}
+        {count > 0 && (
+          <>
+            <div className="h-16 lg:hidden" />
+            <a
+              href="#cart"
+              className="btn-primary fixed inset-x-4 bottom-4 z-30 h-14 justify-between px-5 lg:hidden"
+            >
+              <span>{t("viewOrder")} · {count}</span>
+              <span>{money(total)}</span>
+            </a>
+          </>
+        )}
       </section>
 
       {/* Features */}

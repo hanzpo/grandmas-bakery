@@ -24,6 +24,9 @@ const strings = {
     backToMenu: "Back to menu",
     add: "Add",
     cancelled: "Checkout cancelled. Your cart is still here.",
+    menuSections: "Menu sections",
+    items: "items",
+    viewOrder: "View order",
   },
   es: {
     tagline: "Parfaits hechos a mano, con mucho cariño.",
@@ -45,6 +48,9 @@ const strings = {
     backToMenu: "Volver al menú",
     add: "Añadir",
     cancelled: "Pago cancelado. Tu carrito sigue aquí.",
+    menuSections: "Secciones del menú",
+    items: "artículos",
+    viewOrder: "Ver pedido",
   },
   zh: {
     tagline: "手工制作的芭菲，层层都是爱。",
@@ -66,6 +72,9 @@ const strings = {
     backToMenu: "返回菜单",
     add: "添加",
     cancelled: "已取消付款，购物车仍保留。",
+    menuSections: "菜单分类",
+    items: "件",
+    viewOrder: "查看订单",
   },
 } satisfies Record<Lang, Record<string, string>>;
 
@@ -73,6 +82,15 @@ export const ALLERGEN_LABELS: Record<Lang, Record<string, string>> = {
   en: { dairy: "Dairy", gluten: "Gluten", nuts: "Nuts", egg: "Egg", soy: "Soy" },
   es: { dairy: "Lácteos", gluten: "Gluten", nuts: "Frutos secos", egg: "Huevo", soy: "Soja" },
   zh: { dairy: "乳制品", gluten: "麸质", nuts: "坚果", egg: "鸡蛋", soy: "大豆" },
+};
+
+/** Menu sections, in the order the customer menu shows them. Unknown categories go last. */
+export const CATEGORIES = ["parfait", "pastry", "bread", "cookie", "cake", "drink"] as const;
+
+export const CATEGORY_LABELS: Record<Lang, Record<string, string>> = {
+  en: { parfait: "Parfaits", pastry: "Pastries", bread: "Breads", cookie: "Cookies & Bars", cake: "Cakes & Pies", drink: "Drinks" },
+  es: { parfait: "Parfaits", pastry: "Bollería", bread: "Panes", cookie: "Galletas y barras", cake: "Pasteles y pays", drink: "Bebidas" },
+  zh: { parfait: "芭菲", pastry: "酥点", bread: "面包", cookie: "曲奇和甜点棒", cake: "蛋糕和派", drink: "饮品" },
 };
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (key: keyof (typeof strings)["en"]) => string };

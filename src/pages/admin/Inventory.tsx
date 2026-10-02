@@ -1,55 +1,64 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { date, dateTime, money } from "../../lib/format";
+import { Link, useSearchParams } from "react-router";
+import { date, dateTime, isoDay, money, shortDate } from "../../lib/format";
 import { supabase, type Enums } from "../../lib/supabase";
+import Bills from "./inventory/Bills";
+import IngredientOrders from "./inventory/IngredientOrders";
+import { num, qty, useIngredients, useInvalidateLedger, useSuppliers } from "./inventory/shared";
 
 type TxnType = Enums<"inventory_txn_type">;
 
-const num = (v: number | string | null | undefined) => Number(v ?? 0);
-const qty = (v: number | string | null | undefined) =>
-  num(v).toLocaleString("en-US", { maximumFractionDigits: 3 });
-
-function useIngredients() {
-  return useQuery({
-    queryKey: ["ingredients"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ingredients")
-        .select("*, suppliers(name)")
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-}
-
-function useSuppliers() {
-  return useQuery({
-    queryKey: ["suppliers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("suppliers").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-}
+const TABS = {
+  stock: "Stock",
+  orders: "Orders & deliveries",
+  bills: "Bills",
+  suppliers: "Suppliers",
+} as const;
+type Tab = keyof typeof TABS;
 
 export default function Inventory() {
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = (params.get("tab") as Tab) in TABS ? (params.get("tab") as Tab) : "stock";
+
   return (
     <div className="space-y-8">
       <header>
         <p className="eyebrow">Inventory</p>
         <h1 className="text-4xl font-black">Ingredients</h1>
-        <p className="mt-1 text-cinnamon">What's on the shelf, what's running low, and what's about to spoil.</p>
+        <p className="mt-1 text-cinnamon">Stock, deliveries, bills and spoilage, all in one place.</p>
       </header>
-      <Alerts />
-      <IngredientTable />
-      <div className="grid gap-6 lg:grid-cols-2">
-        <LogTransactionForm />
-        <RecentTransactions />
-      </div>
-      <Suppliers />
-      <PriceComparison />
+      <nav className="flex flex-wrap gap-2" aria-label="Inventory sections">
+        {(Object.keys(TABS) as Tab[]).map((t) => (
+          <button
+            key={t}
+            className={`${tab === t ? "chip-active" : "chip"} px-5 py-2.5 text-base`}
+            aria-current={tab === t ? "page" : undefined}
+            onClick={() => setParams(t === "stock" ? {} : { tab: t }, { replace: true })}
+          >
+            {TABS[t]}
+          </button>
+        ))}
+      </nav>
+
+      {tab === "stock" && (
+        <>
+          <Alerts />
+          <IngredientTable />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <LogTransactionForm />
+            <RecentTransactions />
+          </div>
+        </>
+      )}
+      {tab === "orders" && <IngredientOrders />}
+      {tab === "bills" && <Bills />}
+      {tab === "suppliers" && (
+        <>
+          <Suppliers />
+          <PriceComparison />
+        </>
+      )}
     </div>
   );
 }
@@ -75,7 +84,14 @@ function Alerts() {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="card">
-        <h2 className="mb-4 text-xl font-extrabold">Running low</h2>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="text-xl font-extrabold">Running low</h2>
+          {!!lowStock.data?.length && (
+            <Link to="?tab=orders" className="btn-ghost px-4 py-2 text-sm">
+              Order more
+            </Link>
+          )}
+        </div>
         {lowStock.data?.length ? (
           <ul className="space-y-2">
             {lowStock.data.map((i) => (
@@ -92,19 +108,11 @@ function Alerts() {
         )}
       </div>
       <div className="card">
-        <h2 className="mb-4 text-xl font-extrabold">Expiring in 3 days</h2>
+        <h2 className="mb-4 text-xl font-extrabold">Use it or lose it</h2>
         {expiring.data?.length ? (
           <ul className="space-y-2">
             {expiring.data.map((l) => (
-              <li key={l.id} className="flex items-center justify-between rounded-2xl bg-butter-soft px-4 py-3">
-                <span className="font-extrabold text-cocoa">
-                  {l.name}{" "}
-                  <span className="font-bold text-cinnamon">
-                    ({qty(l.quantity)} {l.unit})
-                  </span>
-                </span>
-                <span className="text-sm font-extrabold text-cocoa">Use by {date(l.expires_on)}</span>
-              </li>
+              <ExpiringLot key={l.id!} lot={l} />
             ))}
           </ul>
         ) : (
@@ -112,6 +120,87 @@ function Alerts() {
         )}
       </div>
     </div>
+  );
+}
+
+type Lot = { id: string | null; ingredient_id: string | null; name: string | null; quantity: number | null; unit: string | null; expires_on: string | null };
+
+/** A delivered lot near its use-by date: close it out as used up, or log what was thrown away. */
+function ExpiringLot({ lot }: { lot: Lot }) {
+  const invalidate = useInvalidateLedger();
+  const [tossing, setTossing] = useState(false);
+  const [amount, setAmount] = useState(String(num(lot.quantity)));
+  const expired = lot.expires_on != null && lot.expires_on < isoDay();
+
+  const close = useMutation({
+    mutationFn: async (spoiled: number) => {
+      if (spoiled > 0) {
+        const { error } = await supabase.from("inventory_transactions").insert({
+          ingredient_id: lot.ingredient_id!,
+          type: "spoilage",
+          quantity: -spoiled,
+          notes: `Spoiled lot, use by ${date(lot.expires_on)}`,
+        });
+        if (error) throw error;
+      }
+      const { error } = await supabase
+        .from("inventory_transactions")
+        .update({ lot_closed_at: new Date().toISOString() })
+        .eq("id", lot.id!);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return (
+    <li className={`rounded-2xl px-4 py-3 ${expired ? "bg-jam-soft" : "bg-butter-soft"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-extrabold text-cocoa">
+          {lot.name}{" "}
+          <span className="font-bold text-cinnamon">
+            ({qty(lot.quantity)} {lot.unit})
+          </span>
+        </span>
+        <span className={`text-sm font-extrabold ${expired ? "text-jam-depth" : "text-cocoa"}`}>
+          {expired ? "Expired" : "Use by"} {shortDate(lot.expires_on)}
+        </span>
+      </div>
+      {tossing ? (
+        <form
+          className="mt-3 flex flex-wrap items-end gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            close.mutate(Math.abs(Number(amount)));
+          }}
+        >
+          <div className="min-w-32 flex-1">
+            <label className="label" htmlFor={`toss-${lot.id}`}>How much went in the bin ({lot.unit})</label>
+            <input
+              id={`toss-${lot.id}`}
+              className="input bg-white"
+              type="number"
+              step="any"
+              min={0}
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+          <button className="btn-primary" disabled={close.isPending}>Log spoilage</button>
+          <button type="button" className="btn-ghost" onClick={() => setTossing(false)}>Back</button>
+        </form>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button className="btn-ghost px-4 py-2 text-sm" disabled={close.isPending} onClick={() => close.mutate(0)}>
+            All used up
+          </button>
+          <button className="btn-ghost px-4 py-2 text-sm text-jam" disabled={close.isPending} onClick={() => setTossing(true)}>
+            Threw some out
+          </button>
+        </div>
+      )}
+      {close.error && <p className="mt-2 text-sm text-jam">{close.error.message}</p>}
+    </li>
   );
 }
 
@@ -184,7 +273,7 @@ const TXN_LABELS: Record<TxnType, string> = {
 };
 
 function LogTransactionForm() {
-  const qc = useQueryClient();
+  const invalidate = useInvalidateLedger();
   const { data: ingredients } = useIngredients();
   const { data: suppliers } = useSuppliers();
 
@@ -222,9 +311,7 @@ function LogTransactionForm() {
       setUnitCost("");
       setExpiresOn("");
       setNotes("");
-      for (const key of ["ingredients", "inventory_transactions", "low_stock_ingredients", "expiring_lots"]) {
-        qc.invalidateQueries({ queryKey: [key] });
-      }
+      invalidate();
     },
   });
 

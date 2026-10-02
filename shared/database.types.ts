@@ -61,6 +61,7 @@ export type Database = {
           incurred_on: string
           is_recurring: boolean
           paid: boolean
+          paid_on: string | null
           recurrence: string | null
           supplier_id: string | null
         }
@@ -73,6 +74,7 @@ export type Database = {
           incurred_on?: string
           is_recurring?: boolean
           paid?: boolean
+          paid_on?: string | null
           recurrence?: string | null
           supplier_id?: string | null
         }
@@ -85,6 +87,7 @@ export type Database = {
           incurred_on?: string
           is_recurring?: boolean
           paid?: boolean
+          paid_on?: string | null
           recurrence?: string | null
           supplier_id?: string | null
         }
@@ -148,12 +151,14 @@ export type Database = {
           expires_on: string | null
           id: string
           ingredient_id: string
+          lot_closed_at: string | null
           notes: string | null
           occurred_at: string
           order_id: string | null
           paid: boolean
           quantity: number
           supplier_id: string | null
+          supplier_order_id: string | null
           type: Database["public"]["Enums"]["inventory_txn_type"]
           unit_cost_cents: number | null
         }
@@ -162,12 +167,14 @@ export type Database = {
           expires_on?: string | null
           id?: string
           ingredient_id: string
+          lot_closed_at?: string | null
           notes?: string | null
           occurred_at?: string
           order_id?: string | null
           paid?: boolean
           quantity: number
           supplier_id?: string | null
+          supplier_order_id?: string | null
           type: Database["public"]["Enums"]["inventory_txn_type"]
           unit_cost_cents?: number | null
         }
@@ -176,12 +183,14 @@ export type Database = {
           expires_on?: string | null
           id?: string
           ingredient_id?: string
+          lot_closed_at?: string | null
           notes?: string | null
           occurred_at?: string
           order_id?: string | null
           paid?: boolean
           quantity?: number
           supplier_id?: string | null
+          supplier_order_id?: string | null
           type?: Database["public"]["Enums"]["inventory_txn_type"]
           unit_cost_cents?: number | null
         }
@@ -212,6 +221,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_supplier_order_id_fkey"
+            columns: ["supplier_order_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -499,6 +515,102 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_order_items: {
+        Row: {
+          id: string
+          ingredient_id: string
+          order_id: string
+          quantity: number
+          quantity_received: number | null
+          unit_cost_cents: number
+        }
+        Insert: {
+          id?: string
+          ingredient_id: string
+          order_id: string
+          quantity: number
+          quantity_received?: number | null
+          unit_cost_cents: number
+        }
+        Update: {
+          id?: string
+          ingredient_id?: string
+          order_id?: string
+          quantity?: number
+          quantity_received?: number | null
+          unit_cost_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_order_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_order_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "low_stock_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_orders: {
+        Row: {
+          arrived_on: string | null
+          created_at: string
+          created_by: string | null
+          expected_on: string | null
+          id: string
+          notes: string | null
+          ordered_on: string
+          paid_on: string | null
+          status: Database["public"]["Enums"]["supplier_order_status"]
+          supplier_id: string
+        }
+        Insert: {
+          arrived_on?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_on?: string | null
+          id?: string
+          notes?: string | null
+          ordered_on?: string
+          paid_on?: string | null
+          status?: Database["public"]["Enums"]["supplier_order_status"]
+          supplier_id: string
+        }
+        Update: {
+          arrived_on?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_on?: string | null
+          id?: string
+          notes?: string | null
+          ordered_on?: string
+          paid_on?: string | null
+          status?: Database["public"]["Enums"]["supplier_order_status"]
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_prices: {
         Row: {
           created_at: string
@@ -595,6 +707,18 @@ export type Database = {
       }
     }
     Views: {
+      bills_due: {
+        Row: {
+          amount_cents: number | null
+          description: string | null
+          due_on: string | null
+          id: string | null
+          is_recurring: boolean | null
+          kind: string | null
+          payee: string | null
+        }
+        Relationships: []
+      }
       customer_stats: {
         Row: {
           email: string | null
@@ -726,6 +850,10 @@ export type Database = {
         }[]
       }
       is_staff: { Args: never; Returns: boolean }
+      receive_supplier_order: {
+        Args: { p_lines: Json; p_order_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       ingredient_unit: "g" | "kg" | "ml" | "l" | "each" | "dozen" | "lb" | "oz"
@@ -739,6 +867,7 @@ export type Database = {
         | "completed"
         | "cancelled"
       payment_method: "stripe" | "card_terminal" | "cash" | "invoice"
+      supplier_order_status: "ordered" | "arrived" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -878,6 +1007,7 @@ export const Constants = {
         "cancelled",
       ],
       payment_method: ["stripe", "card_terminal", "cash", "invoice"],
+      supplier_order_status: ["ordered", "arrived", "cancelled"],
     },
   },
 } as const
