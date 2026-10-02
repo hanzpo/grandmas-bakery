@@ -1,3 +1,4 @@
+import { BAKERY } from "../lib/bakery";
 import { createContext, useContext, useState } from "react";
 import { Link, Outlet } from "react-router";
 import { I18nProvider, LANGUAGES, useI18n, type Lang } from "../i18n";
@@ -61,7 +62,7 @@ function Footer() {
   return (
     <footer className="border-t-2 border-crumb">
       <div className="mx-auto flex max-w-[1120px] flex-wrap justify-between gap-2 px-4 py-6 text-sm font-extrabold text-cinnamon sm:px-6">
-        <span>Grandma's Bakery · [ADDRESS]</span>
+        <span>Grandma's Bakery · {BAKERY.address}</span>
         <span>Made with butter and love</span>
       </div>
     </footer>

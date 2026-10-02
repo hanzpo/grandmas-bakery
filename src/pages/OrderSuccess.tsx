@@ -1,3 +1,4 @@
+import { BAKERY } from "../lib/bakery";
 import { Link, useSearchParams } from "react-router";
 import { BunBunHappy } from "../components/illustrations";
 
@@ -70,7 +71,7 @@ export default function OrderSuccess() {
 
       <div className="flex flex-col gap-3">
         <Link to="/" className="btn-primary h-14 w-full">Got it</Link>
-        <a href="/#visit" className="btn-ghost h-14 w-full">Get directions</a>
+        <a href={BAKERY.mapsLink} target="_blank" rel="noreferrer" className="btn-ghost h-14 w-full">Get directions</a>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { BAKERY, todaysHours } from "../lib/bakery";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
@@ -87,7 +88,7 @@ export default function Home() {
         <div className="flex flex-[1_1_420px] flex-col gap-5">
           <div className="flex items-center gap-2 self-start rounded-full bg-pistachio-soft px-3.5 py-2 text-sm font-black text-[#24692b]">
             <span className="h-2.5 w-2.5 rounded-full bg-pistachio" />
-            Open today · [HOURS]
+            {todaysHours()}
           </div>
           <h1 className="text-[clamp(40px,6vw,64px)] leading-[1.02] font-black tracking-[-0.02em]">
             Baked this morning,
@@ -97,7 +98,7 @@ export default function Home() {
           <p className="max-w-[480px] text-[19px] leading-normal font-bold text-cinnamon">{t("tagline")} Order online for pickup, or just call or text us.</p>
           <div className="flex flex-wrap gap-3">
             <a href="#menu" className="btn-primary h-14 px-7">{t("orderNow")}</a>
-            <a href="#visit" className="btn-ghost h-14 px-7">Call or text us</a>
+            <a href={BAKERY.phoneHref} className="btn-ghost h-14 px-7">Call or text us</a>
           </div>
         </div>
         <div className="relative flex flex-[1_1_360px] justify-center">
@@ -253,9 +254,9 @@ export default function Home() {
         <div className="flex flex-[1_1_320px] flex-col gap-4">
           <h2 className="text-[40px] leading-none font-black">Come say hi</h2>
           {[
-            ["Address", "[ADDRESS]"],
-            ["Hours", "[HOURS]"],
-            ["Call or text", "[BAKERY PHONE NUMBER]"],
+            ["Address", BAKERY.address],
+            ["Hours", BAKERY.hoursSummary],
+            ["Call or text", BAKERY.phone],
           ].map(([k, v]) => (
             <div key={k}>
               <div className="eyebrow">{k}</div>
@@ -263,9 +264,13 @@ export default function Home() {
             </div>
           ))}
         </div>
-        <div className="flex min-h-[220px] flex-[1_1_420px] items-center justify-center rounded-3xl border-2 border-dashed border-crust bg-dough font-extrabold text-cinnamon">
-          [MAP EMBED]
-        </div>
+        <iframe
+          title="Map to Grandma's Bakery"
+          src={BAKERY.mapsEmbed}
+          loading="lazy"
+          className="min-h-[260px] flex-[1_1_420px] rounded-3xl border-2 border-crumb"
+          style={{ boxShadow: "0 4px 0 var(--color-crumb)" }}
+        />
       </section>
     </>
   );
