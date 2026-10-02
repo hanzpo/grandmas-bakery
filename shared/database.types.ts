@@ -705,6 +705,254 @@ export type Database = {
         }
         Relationships: []
       }
+      supply_calls: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          id: string
+          purpose: Database["public"]["Enums"]["supply_call_purpose"]
+          run_id: string
+          status: Database["public"]["Enums"]["supply_call_status"]
+          supplier_id: string
+          to_number: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          purpose: Database["public"]["Enums"]["supply_call_purpose"]
+          run_id: string
+          status?: Database["public"]["Enums"]["supply_call_status"]
+          supplier_id: string
+          to_number?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          purpose?: Database["public"]["Enums"]["supply_call_purpose"]
+          run_id?: string
+          status?: Database["public"]["Enums"]["supply_call_status"]
+          supplier_id?: string
+          to_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_calls_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "supply_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_calls_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_orders: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          run_id: string
+          supplier_id: string
+          total_cents: number
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          run_id: string
+          supplier_id: string
+          total_cents: number
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          run_id?: string
+          supplier_id?: string
+          total_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_orders_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: true
+            referencedRelation: "supply_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_quotes: {
+        Row: {
+          available: boolean
+          conversation_id: string | null
+          ingredient_id: string
+          price_cents: number | null
+          run_id: string
+          supplier_id: string
+        }
+        Insert: {
+          available: boolean
+          conversation_id?: string | null
+          ingredient_id: string
+          price_cents?: number | null
+          run_id: string
+          supplier_id: string
+        }
+        Update: {
+          available?: boolean
+          conversation_id?: string | null
+          ingredient_id?: string
+          price_cents?: number | null
+          run_id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_quotes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_quotes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "low_stock_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_quotes_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "supply_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_run_items: {
+        Row: {
+          ingredient_id: string
+          quantity: number
+          run_id: string
+        }
+        Insert: {
+          ingredient_id: string
+          quantity: number
+          run_id: string
+        }
+        Update: {
+          ingredient_id?: string
+          quantity?: number
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_run_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_run_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "low_stock_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_run_items_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "supply_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_runs: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["supply_run_status"]
+          trigger: string
+          updated_at: string
+          winner_supplier_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["supply_run_status"]
+          trigger: string
+          updated_at?: string
+          winner_supplier_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["supply_run_status"]
+          trigger?: string
+          updated_at?: string
+          winner_supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_runs_winner_supplier_id_fkey"
+            columns: ["winner_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supply_settings: {
+        Row: {
+          id: number
+          polling_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          polling_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          polling_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       bills_due: {
@@ -868,6 +1116,9 @@ export type Database = {
         | "cancelled"
       payment_method: "stripe" | "card_terminal" | "cash" | "invoice"
       supplier_order_status: "ordered" | "arrived" | "cancelled"
+      supply_call_purpose: "quote" | "order"
+      supply_call_status: "pending" | "dialing" | "quoted" | "ordered" | "failed" | "skipped"
+      supply_run_status: "quoting" | "ordering" | "placed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1008,6 +1259,9 @@ export const Constants = {
       ],
       payment_method: ["stripe", "card_terminal", "cash", "invoice"],
       supplier_order_status: ["ordered", "arrived", "cancelled"],
+      supply_call_purpose: ["quote", "order"],
+      supply_call_status: ["pending", "dialing", "quoted", "ordered", "failed", "skipped"],
+      supply_run_status: ["quoting", "ordering", "placed", "failed"],
     },
   },
 } as const
