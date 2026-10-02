@@ -5,6 +5,10 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  "routes": [
+    { "pattern": "getgrandma.com", "custom_domain": true },
+    { "pattern": "www.getgrandma.com", "custom_domain": true }
+  ],
   // The React SPA is served as static assets; only /api/* hits the Worker.
   "assets": {
     "not_found_handling": "single-page-application",
