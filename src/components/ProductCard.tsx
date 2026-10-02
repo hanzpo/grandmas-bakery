@@ -25,7 +25,7 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
     {/* Phones/tablets: compact row so the menu isn't a mile long. */}
     <article className="flex gap-3 rounded-[20px] border-2 border-b-4 border-crumb bg-white p-3 lg:hidden">
       <div className={`relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-2xl ${tint}`}>
-        <Icon className="h-14 w-14" />
+        {item.image_url ? <ProductPhoto src={item.image_url} alt={name} className="rounded-2xl" /> : <Icon className="h-14 w-14" />}
         {item.is_flavor_of_month && (
           <span className="absolute -top-1.5 -left-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-butter text-xs font-black text-cocoa shadow-[0_2px_0_var(--color-butter-depth)]" aria-label={t("grandmasPick")}>★</span>
         )}
@@ -60,8 +60,8 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
     </article>
 
     <article className="hidden flex-col gap-3 rounded-[22px] border-2 border-b-[5px] border-crumb bg-white p-3.5 lg:flex">
-      <div className={`relative flex h-36 items-center justify-center rounded-2xl ${tint}`}>
-        <Icon className="h-24 w-24" />
+      <div className={`relative flex h-36 items-center justify-center overflow-hidden rounded-2xl ${tint}`}>
+        {item.image_url ? <ProductPhoto src={item.image_url} alt={name} /> : <Icon className="h-24 w-24" />}
         {item.is_flavor_of_month && (
           <span className="tag absolute top-2.5 left-2.5 bg-butter-soft text-butter-depth">{t("grandmasPick")}</span>
         )}
@@ -102,5 +102,27 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
         ))}
     </article>
     </>
+  );
+}
+
+/**
+ * Menu photo in two sizes (public/menu/<slug>-320.jpg and -640.jpg). Tiles render at most
+ * ~230×145 (desktop) / 84×84 (phones), so the browser only fetches what the screen needs.
+ * The tile's tint shows behind it while loading.
+ */
+function ProductPhoto({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
+  const small = src.replace(/-640\.jpg$/, "-320.jpg");
+  return (
+    <img
+      src={small}
+      srcSet={small === src ? undefined : `${small} 320w, ${src} 640w`}
+      sizes="(min-width: 1024px) 230px, 84px"
+      width={640}
+      height={480}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={`absolute inset-0 h-full w-full object-cover ${className}`}
+    />
   );
 }
