@@ -1,44 +1,112 @@
 @import "tailwindcss";
 
-/* Warm, high-contrast palette with big touch targets: built for grandma on a tablet. */
+/* Grandma's Bakery Design System (Claude Design).
+   Bright colors each have a darker "depth" partner used for a solid 4px bottom edge.
+   No blurry shadows: depth shrinks to 2px when pressed. One family, Nunito, never lighter than 600. */
 @theme {
-  --color-cream: #faf3e7;
-  --color-crust: #f1e2c7;
-  --color-terracotta: #c2603a;
-  --color-terracotta-dark: #9c4526;
-  --color-berry: #c8343a;
-  --color-sage: #6b8f4e;
-  --color-ink: #2b1d14;
-  --color-muted: #7a6656;
-  --font-display: "Fraunces", Georgia, serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --color-jam: #d4335a;
+  --color-jam-depth: #a52342;
+  --color-jam-soft: #ffe1e8;
+  --color-blueberry: #2672c9;
+  --color-blueberry-depth: #1b5598;
+  --color-blueberry-soft: #e1edfb;
+  --color-butter: #ffc93c;
+  --color-butter-depth: #d9a21a;
+  --color-butter-soft: #fff1cc;
+  --color-pistachio: #58b85f;
+  --color-pistachio-depth: #3e9145;
+  --color-pistachio-soft: #e2f4e3;
+
+  --color-flour: #fffdf8;
+  --color-dough: #f6efe4;
+  --color-crumb: #e8ddcc;
+  --color-crust: #d6c7b0;
+  --color-cinnamon: #8a6a58;
+  --color-cocoa: #4a2e22;
+
+  /* Aliases for older class names so existing pages adopt the palette. */
+  --color-cream: var(--color-flour);
+  --color-terracotta: var(--color-jam);
+  --color-terracotta-dark: var(--color-jam-depth);
+  --color-berry: var(--color-jam);
+  --color-sage: var(--color-pistachio-depth);
+  --color-muted: var(--color-cinnamon);
+  --color-ink: var(--color-cocoa);
+
+  --font-display: "Nunito", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Nunito", ui-rounded, system-ui, sans-serif;
 }
 
 body {
-  @apply bg-cream text-ink font-sans antialiased;
+  @apply bg-flour font-sans font-semibold text-cocoa antialiased;
 }
 
 h1, h2, h3 {
-  @apply font-display;
+  @apply font-extrabold tracking-tight;
+}
+h1 {
+  @apply font-black;
 }
 
+/* ── Buttons ─────────────────────────────────────────── */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-base font-semibold transition disabled:opacity-50;
+  @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl px-6 py-3 text-base font-black tracking-[0.08em] uppercase transition-[transform,box-shadow] duration-75 select-none;
+  @apply disabled:cursor-not-allowed disabled:opacity-60;
+  box-shadow: 0 4px 0 var(--btn-depth, var(--color-crumb));
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 var(--btn-depth, var(--color-crumb));
+  }
 }
 @utility btn-primary {
-  @apply btn bg-terracotta text-white hover:bg-terracotta-dark;
+  @apply btn bg-jam text-white;
+  --btn-depth: var(--color-jam-depth);
+}
+@utility btn-blue {
+  @apply btn bg-blueberry text-white;
+  --btn-depth: var(--color-blueberry-depth);
+}
+@utility btn-butter {
+  @apply btn bg-butter text-cocoa;
+  --btn-depth: var(--color-butter-depth);
 }
 @utility btn-ghost {
-  @apply btn border border-crust bg-white hover:bg-crust;
+  @apply btn border-2 border-crumb bg-white text-blueberry;
+  --btn-depth: var(--color-crumb);
 }
+@utility btn-icon {
+  @apply btn h-12 w-12 border-2 border-crumb bg-white p-0 text-cocoa;
+}
+
+/* ── Surfaces ────────────────────────────────────────── */
 @utility card {
-  @apply rounded-2xl border border-crust bg-white p-5 shadow-sm;
+  @apply rounded-3xl border-2 border-crumb bg-white p-6;
+  box-shadow: 0 4px 0 var(--color-crumb);
 }
+@utility eyebrow {
+  @apply text-[13px] font-extrabold tracking-[0.12em] text-cinnamon uppercase;
+}
+
+/* ── Form controls ───────────────────────────────────── */
 @utility input {
-  @apply w-full rounded-xl border border-crust bg-white px-4 py-3 text-base outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20;
+  @apply w-full rounded-2xl border-2 border-crumb bg-dough px-4 py-3 text-base font-semibold text-cocoa outline-none placeholder:text-cinnamon/70;
+  &:focus {
+    @apply border-blueberry bg-white ring-4 ring-blueberry/20;
+  }
 }
 @utility label {
-  @apply mb-1 block text-sm font-medium text-muted;
+  @apply mb-1.5 block text-sm font-extrabold text-cocoa;
+}
+@utility chip {
+  @apply inline-flex cursor-pointer items-center rounded-full border-2 border-crumb bg-white px-4 py-1.5 text-sm font-extrabold text-cocoa;
+  box-shadow: 0 3px 0 var(--color-crumb);
+}
+@utility chip-active {
+  @apply chip border-blueberry bg-blueberry-soft text-blueberry-depth;
+  box-shadow: 0 3px 0 var(--color-blueberry);
+}
+@utility tag {
+  @apply inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black tracking-[0.06em] uppercase;
 }
 
 @layer components {
@@ -46,9 +114,9 @@ h1, h2, h3 {
     @apply w-full text-left text-sm;
   }
   .table th {
-    @apply border-b border-crust px-3 py-2 font-medium text-muted;
+    @apply border-b-2 border-crumb px-3 py-2 text-xs font-extrabold tracking-[0.08em] text-cinnamon uppercase;
   }
   .table td {
-    @apply border-b border-crust/60 px-3 py-3;
+    @apply border-b border-crumb/70 px-3 py-3;
   }
 }
