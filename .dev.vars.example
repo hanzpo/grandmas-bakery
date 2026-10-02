@@ -1,0 +1,6 @@
+# Copy to .dev.vars (gitignored). Worker-side secrets.
+SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+# Override vars for local Supabase (`supabase start`):
+# SUPABASE_URL=http://127.0.0.1:55321
