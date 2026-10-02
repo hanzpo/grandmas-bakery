@@ -1,3 +1,4 @@
+import { ReviewsCard } from "../../components/admin/ReviewsCard";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, type ReactNode } from "react";
 import {
@@ -282,18 +283,7 @@ export default function Marketing() {
           {lapsedRegulars.length === 0 && <Empty>Everyone's been in recently 🎉</Empty>}
         </section>
 
-        <section className="card">
-          <h2 className="mb-1 text-xl font-extrabold">Reviews</h2>
-          <p className="mb-4 text-sm text-cinnamon">Google Maps & Yelp</p>
-          <div className="rounded-2xl border-2 border-dashed border-crumb bg-dough p-5 text-center">
-            <p className="text-3xl">⭐️</p>
-            <p className="mt-2 font-extrabold">Connect Google Business Profile</p>
-            <p className="text-sm text-cinnamon">Coming soon: see new reviews and reply right from here.</p>
-            <button className="btn-blue mt-4" disabled>
-              Connect
-            </button>
-          </div>
-        </section>
+        <ReviewsCard />
       </div>
     </div>
   );
