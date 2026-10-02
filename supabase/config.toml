@@ -419,8 +419,10 @@ enabled = true
 project_id = "lnubzikdbtywhhwiutjz"
 
 [remotes.production.auth]
-site_url = "https://grandmas-bakery.hanznathanpo.workers.dev"
+site_url = "https://getgrandma.com"
 additional_redirect_urls = [
+  "https://getgrandma.com/**",
+  "https://www.getgrandma.com/**",
   "https://grandmas-bakery.hanznathanpo.workers.dev/**",
   "http://localhost:5173/**",
   "http://127.0.0.1:5173/**",
