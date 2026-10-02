@@ -2,5 +2,7 @@
 SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+# Shared with the ElevenLabs place_order tool header x-voice-secret.
+ELEVENLABS_TOOL_SECRET=
 # Override vars for local Supabase (`supabase start`):
 # SUPABASE_URL=http://127.0.0.1:55321
