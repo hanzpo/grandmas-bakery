@@ -18,7 +18,7 @@
     "run_worker_first": ["/api/*"]
   },
   // Non-secret config. Secrets (SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY,
-  // STRIPE_WEBHOOK_SECRET, ELEVENLABS_TOOL_SECRET) go in .dev.vars locally and
+  // STRIPE_WEBHOOK_SECRET, ELEVENLABS_TOOL_SECRET, UGC_PIPELINE_URL, UGC_PIPELINE_SECRET) go in .dev.vars locally and
   // `wrangler secret put` in prod.
   // ELEVENLABS_API_KEY is a secret via .dev.vars / wrangler secret put.
   "vars": {

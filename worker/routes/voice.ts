@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { adminDb, priceItems, upsertCustomer } from "../lib";
+import { adminDb, authorized, priceItems, upsertCustomer } from "../lib";
 
 /**
  * ElevenLabs calls POST /order after Grandma confirms a pickup order.
@@ -114,16 +114,6 @@ export const voice = new Hono<{ Bindings: Env }>().post("/order", async (c) => {
     pickup_at: pickup,
   });
 });
-
-function authorized(expected: string | undefined, got: string | undefined) {
-  if (!expected || !got) return false;
-  const a = new TextEncoder().encode(expected);
-  const b = new TextEncoder().encode(got);
-  if (a.byteLength !== b.byteLength) return false;
-  let diff = 0;
-  for (let i = 0; i < a.byteLength; i++) diff |= a[i]! ^ b[i]!;
-  return diff === 0;
-}
 
 function dollars(cents: number) {
   return `$${(cents / 100).toFixed(2)}`;

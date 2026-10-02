@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { checkout } from "./routes/checkout";
 import { stripeWebhook } from "./routes/stripe-webhook";
 import { supply } from "./routes/supply";
+import { ugcVideos } from "./routes/ugc-videos";
 import { voice } from "./routes/voice";
 
 const app = new Hono<{ Bindings: Env }>().basePath("/api");
@@ -11,6 +12,7 @@ app.route("/checkout", checkout);
 app.route("/stripe/webhook", stripeWebhook);
 app.route("/voice", voice);
 app.route("/supply", supply);
+app.route("/ugc-videos", ugcVideos);
 
 app.onError((err, c) => {
   console.error(err);

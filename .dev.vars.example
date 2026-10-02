@@ -6,5 +6,9 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 ELEVENLABS_TOOL_SECRET=
 # ElevenLabs API key for outbound grocery calls. Secret via .dev.vars / wrangler secret put.
 ELEVENLABS_API_KEY=
+# External UGC video pipeline (Admin → Marketing). The secret is sent as a Bearer token
+# and must come back as x-ugc-secret on POST /api/ugc-videos/callback.
+UGC_PIPELINE_URL=
+UGC_PIPELINE_SECRET=
 # Override vars for local Supabase (`supabase start`):
 # SUPABASE_URL=http://127.0.0.1:55321

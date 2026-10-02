@@ -54,3 +54,14 @@ export async function priceItems(
   const subtotal = lines.reduce((s, l) => s + l.unit_price_cents * l.quantity, 0);
   return { lines, subtotal };
 }
+
+/** Constant-time compare for shared-secret webhook headers. False when either side is missing. */
+export function authorized(expected: string | undefined, got: string | undefined) {
+  if (!expected || !got) return false;
+  const a = new TextEncoder().encode(expected);
+  const b = new TextEncoder().encode(got);
+  if (a.byteLength !== b.byteLength) return false;
+  let diff = 0;
+  for (let i = 0; i < a.byteLength; i++) diff |= a[i]! ^ b[i]!;
+  return diff === 0;
+}

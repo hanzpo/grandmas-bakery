@@ -62,6 +62,7 @@ const router = createBrowserRouter([
           { path: "inventory", lazy: admin(() => import("./pages/admin/Inventory")) },
           { path: "menu", lazy: admin(() => import("./pages/admin/Menu")) },
           { path: "customers", lazy: admin(() => import("./pages/admin/Customers")) },
+          { path: "insights", lazy: admin(() => import("./pages/admin/Insights")) },
           { path: "marketing", lazy: admin(() => import("./pages/admin/Marketing")) },
         ],
       },

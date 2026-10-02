@@ -953,6 +953,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ugc_videos: {
+        Row: {
+          brief: string
+          created_at: string
+          created_by: string | null
+          error: string | null
+          external_id: string | null
+          id: string
+          status: Database["public"]["Enums"]["ugc_video_status"]
+          thumbnail_url: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          brief: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["ugc_video_status"]
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          brief?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          external_id?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["ugc_video_status"]
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       bills_due: {
@@ -1119,6 +1158,7 @@ export type Database = {
       supply_call_purpose: "quote" | "order"
       supply_call_status: "pending" | "dialing" | "quoted" | "ordered" | "failed" | "skipped"
       supply_run_status: "quoting" | "ordering" | "placed" | "failed"
+      ugc_video_status: "queued" | "generating" | "ready" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1262,6 +1302,7 @@ export const Constants = {
       supply_call_purpose: ["quote", "order"],
       supply_call_status: ["pending", "dialing", "quoted", "ordered", "failed", "skipped"],
       supply_run_status: ["quoting", "ordering", "placed", "failed"],
+      ugc_video_status: ["queued", "generating", "ready", "failed"],
     },
   },
 } as const

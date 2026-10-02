@@ -28,7 +28,7 @@ staff account, `admin@grandmas-bakery.app`, so database permissions still apply.
 ```
 src/                 React app
   pages/             public: Home (menu), Order, OrderSuccess
-  pages/admin/       Queue, Orders, Inventory, Menu (recipe costing), Customers, Marketing
+  pages/admin/       Queue, Orders, Inventory, Menu (recipe costing), Customers, Insights, Marketing
   i18n/              en/es/zh strings (multilingual menu)
 worker/              Cloudflare Worker (Hono), served at /api/*
   routes/checkout.ts        creates a pending order + Stripe Checkout Session

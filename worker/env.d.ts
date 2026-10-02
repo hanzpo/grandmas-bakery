@@ -11,4 +11,8 @@ interface Env {
   SUPPLY_AGENT_ID?: string;
   /** Bakery caller id for outbound grocery calls. Wrangler var, not a secret. */
   SUPPLY_PHONE_NUMBER_ID?: string;
+  /** External UGC video pipeline endpoint. The Marketing page shows "not connected" when unset. */
+  UGC_PIPELINE_URL?: string;
+  /** Bearer token sent to the pipeline, and the x-ugc-secret it must send back on callbacks. */
+  UGC_PIPELINE_SECRET?: string;
 }
