@@ -5,11 +5,51 @@ import { supabase, type Enums } from "../../lib/supabase";
 
 type Status = Enums<"order_status">;
 
-const COLUMNS: { status: Status; title: string; next: Status; action: string; accent: string }[] = [
-  { status: "new", title: "New", next: "in_progress", action: "Start making", accent: "border-t-terracotta" },
-  { status: "in_progress", title: "In progress", next: "ready", action: "Mark ready", accent: "border-t-berry" },
-  { status: "ready", title: "Ready for pickup", next: "completed", action: "Picked up", accent: "border-t-sage" },
+const COLUMNS: {
+  status: Status;
+  title: string;
+  next: Status;
+  action: string;
+  header: string;
+  count: string;
+  button: string;
+}[] = [
+  {
+    status: "new",
+    title: "New",
+    next: "in_progress",
+    action: "Start making",
+    header: "bg-blueberry-soft text-blueberry-depth",
+    count: "bg-blueberry text-white",
+    button: "btn-blue",
+  },
+  {
+    status: "in_progress",
+    title: "In progress",
+    next: "ready",
+    action: "Mark ready",
+    header: "bg-butter-soft text-cocoa",
+    count: "bg-butter text-cocoa",
+    button: "btn-butter",
+  },
+  {
+    status: "ready",
+    title: "Ready for pickup",
+    next: "completed",
+    action: "Picked up",
+    header: "bg-pistachio-soft text-pistachio-depth",
+    count: "bg-pistachio text-white",
+    button: "btn-primary",
+  },
 ];
+
+const SOURCE_TAGS: Record<Enums<"order_source">, string> = {
+  online: "bg-blueberry-soft text-blueberry-depth",
+  walk_in: "bg-dough text-cinnamon",
+  phone: "bg-butter-soft text-cocoa",
+  voice_agent: "bg-jam-soft text-jam-depth",
+  b2b: "bg-pistachio-soft text-pistachio-depth",
+};
 
 const SOURCE_LABELS: Record<Enums<"order_source">, string> = {
   online: "Online",
@@ -59,28 +99,38 @@ export default function Queue() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
   });
 
-  if (isLoading) return <p className="text-muted">Loading orders…</p>;
-  if (error) return <p className="text-berry">Couldn't load orders: {error.message}</p>;
+  if (isLoading) return <p className="text-cinnamon">Loading orders…</p>;
+  if (error) return <p className="text-jam">Couldn't load orders: {error.message}</p>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl">Order queue</h1>
-      <div className="grid gap-5 lg:grid-cols-3">
+    <div className="space-y-8">
+      <header>
+        <p className="eyebrow">Today</p>
+        <h1 className="text-4xl font-black">Order queue</h1>
+      </header>
+      <div className="grid gap-6 lg:grid-cols-3">
         {COLUMNS.map((col) => {
           const colOrders = orders.filter((o) => o.status === col.status);
           return (
-            <section key={col.status} className={`rounded-2xl border-t-8 bg-crust/50 p-4 ${col.accent}`}>
-              <h2 className="mb-4 flex items-center justify-between text-xl">
+            <section key={col.status} className="rounded-3xl bg-dough p-3">
+              <h2 className={`mb-4 flex items-center justify-between rounded-2xl px-4 py-3 text-xl font-black ${col.header}`}>
                 {col.title}
-                <span className="rounded-full bg-white px-3 py-1 text-base font-sans">{colOrders.length}</span>
+                <span className={`min-w-9 rounded-full px-3 py-0.5 text-center text-base font-black ${col.count}`}>
+                  {colOrders.length}
+                </span>
               </h2>
               <div className="space-y-4">
-                {colOrders.length === 0 && <p className="py-8 text-center text-muted">Nothing here</p>}
+                {colOrders.length === 0 && (
+                  <p className="rounded-2xl border-2 border-dashed border-crumb py-10 text-center font-bold text-cinnamon">
+                    Nothing here
+                  </p>
+                )}
                 {colOrders.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order}
                     action={col.action}
+                    button={col.button}
                     busy={setStatus.isPending && setStatus.variables?.id === order.id}
                     onAdvance={() => setStatus.mutate({ id: order.id, status: col.next })}
                     onCancel={() => {
@@ -102,12 +152,14 @@ export default function Queue() {
 function OrderCard({
   order,
   action,
+  button,
   busy,
   onAdvance,
   onCancel,
 }: {
   order: QueueOrder;
   action: string;
+  button: string;
   busy: boolean;
   onAdvance: () => void;
   onCancel: () => void;
@@ -115,37 +167,38 @@ function OrderCard({
   const isLate = order.pickup_at && new Date(order.pickup_at) < new Date();
 
   return (
-    <article className="card space-y-3">
+    <article className="card space-y-3 p-5">
       <header className="flex items-start justify-between gap-2">
         <div>
-          <p className="font-display text-2xl">#{order.order_number}</p>
-          <p className="text-lg font-semibold">{order.customers?.name ?? "Walk-in customer"}</p>
+          <p className="text-2xl font-black">#{order.order_number}</p>
+          <p className="text-lg font-extrabold">{order.customers?.name ?? "Walk-in customer"}</p>
         </div>
-        <span className="rounded-full bg-cream px-3 py-1 text-sm font-medium text-terracotta-dark">
-          {SOURCE_LABELS[order.source]}
-        </span>
+        <span className={`tag ${SOURCE_TAGS[order.source]}`}>{SOURCE_LABELS[order.source]}</span>
       </header>
 
       <ul className="space-y-1 text-lg">
         {order.order_items.map((item) => (
           <li key={item.id}>
-            <span className="font-bold">{item.quantity}×</span> {item.products?.name}
-            {item.notes && <span className="block text-sm text-muted">{item.notes}</span>}
+            <span className="font-black text-jam">{item.quantity}×</span>{" "}
+            <span className="font-bold">{item.products?.name}</span>
+            {item.notes && <span className="block text-sm text-cinnamon">{item.notes}</span>}
           </li>
         ))}
       </ul>
 
-      {order.notes && <p className="rounded-lg bg-cream px-3 py-2 text-sm">📝 {order.notes}</p>}
+      {order.notes && (
+        <p className="rounded-2xl bg-butter-soft px-4 py-2 text-sm font-bold text-cocoa">📝 {order.notes}</p>
+      )}
 
-      <p className={`text-sm ${isLate ? "font-semibold text-berry" : "text-muted"}`}>
+      <p className={`text-sm font-bold ${isLate ? "text-jam" : "text-cinnamon"}`}>
         {order.pickup_at ? `Pickup ${dateTime(order.pickup_at)}` : "No pickup time"} · placed {timeAgo(order.created_at)}
       </p>
 
       <div className="flex gap-2">
-        <button className="btn-primary flex-1 py-4 text-lg" disabled={busy} onClick={onAdvance}>
+        <button className={`${button} flex-1 py-4 text-base`} disabled={busy} onClick={onAdvance}>
           {action}
         </button>
-        <button className="btn-ghost px-3 text-sm text-muted" disabled={busy} onClick={onCancel}>
+        <button className="btn-ghost px-4 text-xs text-cinnamon" disabled={busy} onClick={onCancel}>
           Cancel
         </button>
       </div>

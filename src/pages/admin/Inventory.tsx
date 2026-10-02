@@ -38,8 +38,9 @@ export default function Inventory() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-extrabold">Ingredients</h1>
-        <p className="text-muted">What's on the shelf, what's running low, and what's about to spoil.</p>
+        <p className="eyebrow">Inventory</p>
+        <h1 className="text-4xl font-black">Ingredients</h1>
+        <p className="mt-1 text-cinnamon">What's on the shelf, what's running low, and what's about to spoil.</p>
       </header>
       <Alerts />
       <IngredientTable />
@@ -73,38 +74,41 @@ function Alerts() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <div className="card border-berry/30">
-        <h2 className="mb-3 text-xl font-semibold text-berry">Running low</h2>
+      <div className="card">
+        <h2 className="mb-4 text-xl font-extrabold">Running low</h2>
         {lowStock.data?.length ? (
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {lowStock.data.map((i) => (
-              <li key={i.id} className="flex justify-between">
-                <span>{i.name}</span>
-                <span className="text-muted">
-                  {qty(i.quantity_on_hand)} / {qty(i.reorder_threshold)} {i.unit}
+              <li key={i.id} className="flex items-center justify-between rounded-2xl bg-jam-soft px-4 py-3">
+                <span className="font-extrabold text-jam-depth">{i.name} is low</span>
+                <span className="text-sm font-bold text-jam-depth">
+                  {qty(i.quantity_on_hand)} left, par is {qty(i.reorder_threshold)} {i.unit}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-muted">Everything is stocked.</p>
+          <p className="rounded-2xl bg-pistachio-soft px-4 py-3 font-bold text-pistachio-depth">Everything is stocked.</p>
         )}
       </div>
-      <div className="card border-terracotta/30">
-        <h2 className="mb-3 text-xl font-semibold text-terracotta">Expiring in 3 days</h2>
+      <div className="card">
+        <h2 className="mb-4 text-xl font-extrabold">Expiring in 3 days</h2>
         {expiring.data?.length ? (
-          <ul className="space-y-1">
+          <ul className="space-y-2">
             {expiring.data.map((l) => (
-              <li key={l.id} className="flex justify-between">
-                <span>
-                  {l.name} <span className="text-muted">({qty(l.quantity)} {l.unit})</span>
+              <li key={l.id} className="flex items-center justify-between rounded-2xl bg-butter-soft px-4 py-3">
+                <span className="font-extrabold text-cocoa">
+                  {l.name}{" "}
+                  <span className="font-bold text-cinnamon">
+                    ({qty(l.quantity)} {l.unit})
+                  </span>
                 </span>
-                <span className="font-medium">{date(l.expires_on)}</span>
+                <span className="text-sm font-extrabold text-cocoa">Use by {date(l.expires_on)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-muted">Nothing expiring soon.</p>
+          <p className="rounded-2xl bg-pistachio-soft px-4 py-3 font-bold text-pistachio-depth">Nothing expiring soon.</p>
         )}
       </div>
     </div>
@@ -116,9 +120,9 @@ function IngredientTable() {
 
   return (
     <section className="card overflow-x-auto">
-      <h2 className="mb-3 text-xl font-semibold">On hand</h2>
+      <h2 className="mb-4 text-xl font-extrabold">On hand</h2>
       {isLoading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-cinnamon">Loading…</p>
       ) : (
         <table className="table">
           <thead>
@@ -135,12 +139,20 @@ function IngredientTable() {
             {ingredients?.map((i) => {
               const low = num(i.quantity_on_hand) <= num(i.reorder_threshold);
               return (
-                <tr key={i.id} className={low ? "bg-berry/5" : undefined}>
-                  <td className="font-medium">{i.name}</td>
-                  <td className={low ? "font-semibold text-berry" : undefined}>
-                    {qty(i.quantity_on_hand)} {i.unit}
+                <tr key={i.id} className={low ? "bg-jam-soft/60" : undefined}>
+                  <td className="font-extrabold">{i.name}</td>
+                  <td>
+                    {low ? (
+                      <span className="tag bg-jam-soft text-jam-depth">
+                        {qty(i.quantity_on_hand)} {i.unit}
+                      </span>
+                    ) : (
+                      <span className="font-bold">
+                        {qty(i.quantity_on_hand)} {i.unit}
+                      </span>
+                    )}
                   </td>
-                  <td className="text-muted">
+                  <td className="text-cinnamon">
                     {qty(i.reorder_threshold)} {i.unit}
                   </td>
                   <td>{money(num(i.cost_per_unit_cents))}</td>
@@ -148,7 +160,7 @@ function IngredientTable() {
                   <td>
                     <div className="flex flex-wrap gap-1">
                       {i.allergens.map((a) => (
-                        <span key={a} className="rounded-full bg-crust px-2 py-0.5 text-xs">
+                        <span key={a} className="tag bg-butter-soft text-cocoa">
                           {a}
                         </span>
                       ))}
@@ -223,15 +235,15 @@ function LogTransactionForm() {
 
   return (
     <form onSubmit={submit} className="card space-y-4">
-      <h2 className="text-xl font-semibold">Log a change</h2>
+      <h2 className="text-xl font-extrabold">Log a change</h2>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="flex flex-wrap gap-2">
         {(Object.keys(TXN_LABELS) as TxnType[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setType(t)}
-            className={type === t ? "btn-primary" : "btn-ghost"}
+            className={type === t ? "chip-active" : "chip"}
           >
             {TXN_LABELS[t]}
           </button>
@@ -308,7 +320,7 @@ function LogTransactionForm() {
         <input className="input" value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
 
-      {log.error && <p className="text-berry">{(log.error as Error).message}</p>}
+      {log.error && <p className="text-jam">{(log.error as Error).message}</p>}
       <button className="btn-primary w-full" disabled={log.isPending}>
         {log.isPending ? "Saving…" : "Save"}
       </button>
@@ -332,21 +344,21 @@ function RecentTransactions() {
 
   return (
     <section className="card">
-      <h2 className="mb-3 text-xl font-semibold">Recent changes</h2>
+      <h2 className="mb-4 text-xl font-extrabold">Recent changes</h2>
       {isLoading ? (
-        <p className="text-muted">Loading…</p>
+        <p className="text-cinnamon">Loading…</p>
       ) : (
-        <ul className="divide-y divide-crust">
+        <ul className="divide-y-2 divide-dough">
           {data?.map((t) => {
             const q = num(t.quantity);
             return (
               <li key={t.id} className="flex items-start justify-between gap-3 py-2">
                 <div>
-                  <div className="font-medium">
+                  <div className="font-extrabold">
                     {t.ingredients?.name}{" "}
-                    <span className="text-sm font-normal text-muted">· {TXN_LABELS[t.type]}</span>
+                    <span className="text-sm font-bold text-cinnamon">· {TXN_LABELS[t.type]}</span>
                   </div>
-                  <div className="text-sm text-muted">
+                  <div className="text-sm text-cinnamon">
                     {dateTime(t.occurred_at)}
                     {t.suppliers?.name && ` · ${t.suppliers.name}`}
                     {t.unit_cost_cents != null && ` · ${money(num(t.unit_cost_cents))}/${t.ingredients?.unit}`}
@@ -354,7 +366,7 @@ function RecentTransactions() {
                     {t.notes && ` · ${t.notes}`}
                   </div>
                 </div>
-                <span className={`font-semibold ${q >= 0 ? "text-sage" : "text-berry"}`}>
+                <span className={`tag ${q >= 0 ? "bg-pistachio-soft text-pistachio-depth" : "bg-jam-soft text-jam-depth"}`}>
                   {q >= 0 ? "+" : ""}
                   {qty(q)} {t.ingredients?.unit}
                 </span>
@@ -400,28 +412,26 @@ function Suppliers() {
   return (
     <section className="grid gap-6 lg:grid-cols-3">
       <div className="card lg:col-span-2">
-        <h2 className="mb-3 text-xl font-semibold">Suppliers</h2>
-        <ul className="divide-y divide-crust">
+        <h2 className="mb-4 text-xl font-extrabold">Suppliers</h2>
+        <ul className="divide-y-2 divide-dough">
           {suppliers?.map((s) => (
             <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
               <div>
-                <div className="flex items-center gap-2 font-medium">
+                <div className="flex items-center gap-2 font-extrabold">
                   {s.name}
-                  {s.is_local && (
-                    <span className="rounded-full bg-sage/15 px-2 py-0.5 text-xs font-semibold text-sage">Local</span>
-                  )}
+                  {s.is_local && <span className="tag bg-pistachio-soft text-pistachio-depth">Local</span>}
                 </div>
-                <div className="text-sm text-muted">
+                <div className="text-sm text-cinnamon">
                   {[s.contact_name, s.notes].filter(Boolean).join(" · ") || "—"}
                 </div>
               </div>
               <div className="text-right text-sm">
                 {s.phone && (
-                  <a href={`tel:${s.phone}`} className="font-medium text-terracotta">
+                  <a href={`tel:${s.phone}`} className="font-extrabold text-blueberry">
                     {s.phone}
                   </a>
                 )}
-                <div className="text-muted">
+                <div className="text-cinnamon">
                   {s.delivery_days.length ? `Delivers ${s.delivery_days.join(", ")}` : "No set delivery days"}
                 </div>
               </div>
@@ -437,7 +447,7 @@ function Suppliers() {
           add.mutate();
         }}
       >
-        <h2 className="text-xl font-semibold">Add supplier</h2>
+        <h2 className="text-xl font-extrabold">Add supplier</h2>
         <div>
           <label className="label">Name</label>
           <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -462,9 +472,7 @@ function Suppliers() {
                 key={d}
                 type="button"
                 onClick={() => toggleDay(d)}
-                className={`rounded-lg px-3 py-1.5 text-sm ${
-                  form.delivery_days.includes(d) ? "bg-terracotta text-white" : "bg-crust"
-                }`}
+                className={`${form.delivery_days.includes(d) ? "chip-active" : "chip"} px-3 capitalize`}
               >
                 {d}
               </button>
@@ -480,7 +488,7 @@ function Suppliers() {
           />
           Local grower
         </label>
-        {add.error && <p className="text-berry">{(add.error as Error).message}</p>}
+        {add.error && <p className="text-jam">{(add.error as Error).message}</p>}
         <button className="btn-primary w-full" disabled={add.isPending}>
           Add
         </button>
@@ -518,8 +526,8 @@ function PriceComparison() {
     <section className="card">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">Compare supplier prices</h2>
-          <p className="text-sm text-muted">Latest quote from each supplier.</p>
+          <h2 className="text-xl font-extrabold">Compare supplier prices</h2>
+          <p className="text-sm text-cinnamon">Latest quote from each supplier.</p>
         </div>
         <select className="input max-w-xs" value={ingredientId} onChange={(e) => setIngredientId(e.target.value)}>
           <option value="">Pick an ingredient…</option>
@@ -532,7 +540,7 @@ function PriceComparison() {
       </div>
 
       {!ingredientId ? null : quotes.length === 0 ? (
-        <p className="text-muted">No quotes recorded for this ingredient yet.</p>
+        <p className="text-cinnamon">No quotes recorded for this ingredient yet.</p>
       ) : (
         <table className="table">
           <thead>
@@ -549,18 +557,18 @@ function PriceComparison() {
               const isCheapest = q.price_cents === cheapest;
               const diff = num(q.price_cents) - num(selected?.cost_per_unit_cents);
               return (
-                <tr key={q.id} className={isCheapest ? "bg-sage/10" : undefined}>
-                  <td className="font-medium">
+                <tr key={q.id} className={isCheapest ? "bg-pistachio-soft/60" : undefined}>
+                  <td className="font-extrabold">
                     {q.suppliers?.name}
-                    {q.suppliers?.is_local && <span className="ml-2 text-xs font-semibold text-sage">Local</span>}
-                    {isCheapest && <span className="ml-2 text-xs font-semibold text-sage">Cheapest</span>}
+                    {q.suppliers?.is_local && <span className="tag ml-2 bg-pistachio-soft text-pistachio-depth">Local</span>}
+                    {isCheapest && <span className="tag ml-2 bg-butter text-cocoa">Cheapest</span>}
                   </td>
                   <td>{money(num(q.price_cents))}</td>
-                  <td className={diff > 0 ? "text-berry" : diff < 0 ? "text-sage" : "text-muted"}>
+                  <td className={diff > 0 ? "text-jam" : diff < 0 ? "text-pistachio-depth" : "text-cinnamon"}>
                     {diff === 0 ? "same" : `${diff > 0 ? "+" : "−"}${money(Math.abs(diff))}`}
                   </td>
-                  <td className="text-muted">{date(q.effective_on)}</td>
-                  <td className="text-muted">
+                  <td className="text-cinnamon">{date(q.effective_on)}</td>
+                  <td className="text-cinnamon">
                     {q.suppliers?.lead_time_days != null ? `${q.suppliers.lead_time_days}d` : "—"}
                   </td>
                 </tr>

@@ -11,6 +11,23 @@ const STATUSES: Status[] = ["pending_payment", "new", "in_progress", "ready", "c
 const SOURCES: Source[] = ["online", "walk_in", "phone", "voice_agent", "b2b"];
 const pretty = (s: string) => s.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
+const STATUS_TAGS: Record<Status, string> = {
+  pending_payment: "bg-dough text-cinnamon",
+  new: "bg-blueberry-soft text-blueberry-depth",
+  in_progress: "bg-butter-soft text-cocoa",
+  ready: "bg-pistachio-soft text-pistachio-depth",
+  completed: "bg-crumb text-cocoa",
+  cancelled: "bg-jam-soft text-jam-depth",
+};
+
+const SOURCE_TAGS: Record<Source, string> = {
+  online: "bg-blueberry-soft text-blueberry-depth",
+  walk_in: "bg-dough text-cinnamon",
+  phone: "bg-butter-soft text-cocoa",
+  voice_agent: "bg-jam-soft text-jam-depth",
+  b2b: "bg-pistachio-soft text-pistachio-depth",
+};
+
 async function fetchOrders(filters: { status: string; source: string; from: string; to: string }) {
   let q = supabase
     .from("orders")
@@ -53,26 +70,35 @@ export default function Orders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl">Orders ledger</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <header>
+          <p className="eyebrow">Ledger</p>
+          <h1 className="text-4xl font-black">Orders</h1>
+        </header>
         <button className="btn-primary" onClick={() => setShowForm((s) => !s)}>
           {showForm ? "Close" : "+ New order"}
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {["", ...STATUSES].map((st) => (
+          <button
+            key={st || "all"}
+            type="button"
+            className={filters.status === st ? "chip-active" : "chip"}
+            onClick={() => setFilters((f) => ({ ...f, status: st }))}
+          >
+            {st ? pretty(st) : "All"}
+          </button>
+        ))}
+      </div>
+
       {showForm && <NewOrderForm onDone={() => setShowForm(false)} />}
 
-      <div className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="label">Search</label>
           <input className="input" placeholder="Name, phone, #" value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <div>
-          <label className="label">Status</label>
-          <select className="input" value={filters.status} onChange={setFilter("status")}>
-            <option value="">All</option>
-            {STATUSES.map((s) => <option key={s} value={s}>{pretty(s)}</option>)}
-          </select>
         </div>
         <div>
           <label className="label">Source</label>
@@ -93,9 +119,9 @@ export default function Orders() {
 
       <div className="card overflow-x-auto p-0">
         {isLoading ? (
-          <p className="p-5 text-muted">Loading…</p>
+          <p className="p-6 text-cinnamon">Loading…</p>
         ) : error ? (
-          <p className="p-5 text-berry">Couldn't load orders: {error.message}</p>
+          <p className="p-6 text-jam">Couldn't load orders: {error.message}</p>
         ) : (
           <table className="table">
             <thead>
@@ -112,32 +138,36 @@ export default function Orders() {
             </thead>
             <tbody>
               {visible.map((o) => (
-                <tr key={o.id} className={o.status === "cancelled" ? "text-muted line-through" : ""}>
-                  <td className="font-semibold">{o.order_number}</td>
+                <tr key={o.id} className={o.status === "cancelled" ? "text-cinnamon line-through" : "hover:bg-dough/60"}>
+                  <td className="font-black">#{o.order_number}</td>
                   <td>{dateTime(o.created_at)}</td>
                   <td>
                     {o.customers?.name ?? "—"}
-                    {o.customers?.organization && <span className="block text-xs text-muted">{o.customers.organization}</span>}
+                    {o.customers?.organization && <span className="block text-xs text-cinnamon">{o.customers.organization}</span>}
                   </td>
                   <td>{o.order_items.map((i) => `${i.quantity}× ${i.products?.name}`).join(", ")}</td>
-                  <td>{pretty(o.source)}</td>
-                  <td>{pretty(o.status)}</td>
+                  <td>
+                    <span className={`tag ${SOURCE_TAGS[o.source]}`}>{pretty(o.source)}</span>
+                  </td>
+                  <td>
+                    <span className={`tag ${STATUS_TAGS[o.status]}`}>{pretty(o.status)}</span>
+                  </td>
                   <td>{dateTime(o.pickup_at)}</td>
-                  <td className="text-right">{money(o.total_cents)}</td>
+                  <td className="text-right font-extrabold">{money(o.total_cents)}</td>
                 </tr>
               ))}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-muted">No orders match.</td>
+                  <td colSpan={8} className="py-10 text-center font-bold text-cinnamon">No orders match.</td>
                 </tr>
               )}
             </tbody>
             <tfoot>
-              <tr className="font-semibold">
-                <td colSpan={7} className="px-3 py-3">
+              <tr className="bg-dough font-extrabold">
+                <td colSpan={7} className="px-3 py-4">
                   {countable.length} orders (excluding cancelled & unpaid)
                 </td>
-                <td className="px-3 py-3 text-right">{money(totalCents)}</td>
+                <td className="px-3 py-4 text-right text-lg font-black">{money(totalCents)}</td>
               </tr>
             </tfoot>
           </table>
@@ -249,7 +279,10 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
 
   return (
     <form onSubmit={submit} className="card space-y-5">
-      <h2 className="text-xl">New order</h2>
+      <div>
+        <p className="eyebrow">Walk-in, phone or catering</p>
+        <h2 className="text-2xl font-extrabold">New order</h2>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <div>
@@ -304,7 +337,7 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
             />
             <button
               type="button"
-              className="btn-ghost px-3"
+              className="btn-icon text-cinnamon"
               disabled={lines.length === 1}
               onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}
               aria-label="Remove item"
@@ -313,7 +346,7 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
             </button>
           </div>
         ))}
-        <button type="button" className="btn-ghost text-sm" onClick={() => setLines((ls) => [...ls, { product_id: "", quantity: 1 }])}>
+        <button type="button" className="btn-ghost px-4 py-2 text-xs" onClick={() => setLines((ls) => [...ls, { product_id: "", quantity: 1 }])}>
           + Add item
         </button>
       </div>
@@ -338,10 +371,10 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {create.error && <p className="text-berry">Couldn't save: {create.error.message}</p>}
+      {create.error && <p className="font-bold text-jam">Couldn't save: {create.error.message}</p>}
 
       <div className="flex items-center justify-between">
-        <p className="text-xl font-semibold">Total {money(total)}</p>
+        <p className="text-2xl font-black">Total {money(total)}</p>
         <button className="btn-primary" disabled={create.isPending || validLines.length === 0}>
           {create.isPending ? "Saving…" : "Add to queue"}
         </button>

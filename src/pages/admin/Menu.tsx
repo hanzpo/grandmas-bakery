@@ -33,8 +33,14 @@ const marginPct = (priceCents: number, costCents: number) =>
   priceCents > 0 ? Math.round(1000 * (1 - costCents / priceCents)) / 10 : null;
 
 function MarginBadge({ pct }: { pct: number | null }) {
-  if (pct == null) return <span className="text-muted">—</span>;
-  return <span className={`font-semibold ${pct < LOW_MARGIN_PCT ? "text-berry" : "text-sage"}`}>{pct}%</span>;
+  if (pct == null) return <span className="text-cinnamon">—</span>;
+  return (
+    <span
+      className={`tag ${pct < LOW_MARGIN_PCT ? "bg-jam-soft text-jam-depth" : "bg-pistachio-soft text-pistachio-depth"}`}
+    >
+      {pct}%
+    </span>
+  );
 }
 
 export default function Menu() {
@@ -43,13 +49,14 @@ export default function Menu() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-3xl font-extrabold">Menu & recipes</h1>
-        <p className="text-muted">
+        <p className="eyebrow">Menu & costs</p>
+        <h1 className="text-4xl font-black">Menu & recipes</h1>
+        <p className="mt-1 text-cinnamon">
           What each item costs to make, and how much you keep. Margins under {LOW_MARGIN_PCT}% are shown in red.
         </p>
       </header>
-      {isLoading && <p className="text-muted">Loading…</p>}
-      {error && <p className="text-berry">{(error as Error).message}</p>}
+      {isLoading && <p className="text-cinnamon">Loading…</p>}
+      {error && <p className="text-jam">{(error as Error).message}</p>}
       {data && (
         <>
           <section className="card overflow-x-auto">
@@ -102,16 +109,20 @@ function ProductRow({ product, data }: { product: MenuData["products"][number]; 
     <>
       <tr>
         <td>
-          <button className="text-lg text-muted" onClick={() => setOpen(!open)} aria-label="Show recipe">
+          <button className="btn-icon h-9 w-9 text-sm" onClick={() => setOpen(!open)} aria-label="Show recipe">
             {open ? "▾" : "▸"}
           </button>
         </td>
-        <td className="font-medium">{product.name}</td>
+        <td className="font-extrabold">
+          {product.name}
+          {product.is_flavor_of_month && <span className="tag ml-2 bg-butter text-cocoa">Grandma's pick</span>}
+          {!product.is_active && <span className="tag ml-2 bg-dough text-cinnamon">Sold out</span>}
+        </td>
         <td>
           <div className="flex items-center gap-1">
-            <span className="text-muted">$</span>
+            <span className="text-cinnamon">$</span>
             <input
-              className="input w-24 px-2 py-1.5"
+              className="input w-24 px-3 py-1.5"
               type="number"
               step="0.25"
               min={0}
@@ -129,7 +140,7 @@ function ProductRow({ product, data }: { product: MenuData["products"][number]; 
         <td>
           <input
             type="checkbox"
-            className="size-5"
+            className="size-5 accent-pistachio"
             checked={product.is_active}
             onChange={(e) => update.mutate({ is_active: e.target.checked })}
           />
@@ -137,7 +148,7 @@ function ProductRow({ product, data }: { product: MenuData["products"][number]; 
         <td>
           <input
             type="checkbox"
-            className="size-5"
+            className="size-5 accent-butter"
             checked={product.is_flavor_of_month}
             onChange={(e) => update.mutate({ is_flavor_of_month: e.target.checked })}
           />
@@ -146,7 +157,7 @@ function ProductRow({ product, data }: { product: MenuData["products"][number]; 
       {open && (
         <tr>
           <td />
-          <td colSpan={6} className="bg-cream">
+          <td colSpan={6} className="bg-dough">
             <RecipeEditor productId={product.id} data={data} />
           </td>
         </tr>
@@ -190,14 +201,14 @@ function RecipeEditor({ productId, data }: { productId: string; data: MenuData }
 
   return (
     <div className="space-y-3 py-2">
-      <h3 className="text-lg font-semibold">Recipe (per item)</h3>
-      {items.length === 0 && <p className="text-muted">No ingredients yet.</p>}
+      <h3 className="text-lg font-extrabold">Recipe (per item)</h3>
+      {items.length === 0 && <p className="text-cinnamon">No ingredients yet.</p>}
       <ul className="space-y-2">
         {items.map((r) => {
           const ing = ingredientById.get(r.ingredient_id);
           return (
             <li key={r.ingredient_id} className="flex flex-wrap items-center gap-3">
-              <span className="w-40 font-medium">{ing?.name}</span>
+              <span className="w-40 font-extrabold">{ing?.name}</span>
               <input
                 className="input w-28 px-2 py-1.5"
                 type="number"
@@ -209,11 +220,11 @@ function RecipeEditor({ productId, data }: { productId: string; data: MenuData }
                   if (q > 0 && q !== num(r.quantity)) upsert.mutate({ ingredient_id: r.ingredient_id, quantity: q });
                 }}
               />
-              <span className="text-muted">{ing?.unit}</span>
-              <span className="text-sm text-muted">
+              <span className="text-cinnamon">{ing?.unit}</span>
+              <span className="text-sm text-cinnamon">
                 = {money(num(r.quantity) * num(ing?.cost_per_unit_cents))}
               </span>
-              <button className="ml-auto text-sm text-berry" onClick={() => remove.mutate(r.ingredient_id)}>
+              <button className="btn-ghost ml-auto px-3 py-1.5 text-xs text-jam" onClick={() => remove.mutate(r.ingredient_id)}>
                 Remove
               </button>
             </li>
@@ -245,10 +256,10 @@ function RecipeEditor({ productId, data }: { productId: string; data: MenuData }
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
         />
-        <button className="btn-ghost py-1.5">Add</button>
+        <button className="btn-blue px-4 py-2 text-sm">Add</button>
       </form>
       {(upsert.error || remove.error) && (
-        <p className="text-berry">{((upsert.error || remove.error) as Error).message}</p>
+        <p className="text-jam">{((upsert.error || remove.error) as Error).message}</p>
       )}
     </div>
   );
@@ -280,8 +291,9 @@ function WhatIfSimulator({ data }: { data: MenuData }) {
   return (
     <section className="card space-y-4">
       <div>
-        <h2 className="text-xl font-semibold">What if a price changes?</h2>
-        <p className="text-sm text-muted">
+        <p className="eyebrow">Trade war simulator</p>
+        <h2 className="text-2xl font-extrabold">What if a price changes?</h2>
+        <p className="text-sm text-cinnamon">
           Try a new supplier price and see how it changes each item's cost and margin. Nothing is saved.
         </p>
       </div>
@@ -321,7 +333,7 @@ function WhatIfSimulator({ data }: { data: MenuData }) {
         )}
       </div>
 
-      {ingredient && affected.length === 0 && <p className="text-muted">No menu items use {ingredient.name}.</p>}
+      {ingredient && affected.length === 0 && <p className="text-cinnamon">No menu items use {ingredient.name}.</p>}
       {affected.length > 0 && (
         <table className="table">
           <thead>
@@ -345,10 +357,10 @@ function WhatIfSimulator({ data }: { data: MenuData }) {
                 marginBefore != null && marginBefore < 100 ? after / (1 - marginBefore / 100) : null;
               return (
                 <tr key={p.id}>
-                  <td className="font-medium">{p.name}</td>
+                  <td className="font-extrabold">{p.name}</td>
                   <td>{money(p.price_cents)}</td>
                   <td>{money(before)}</td>
-                  <td className={after > before ? "text-berry" : after < before ? "text-sage" : undefined}>
+                  <td className={after > before ? "text-jam" : after < before ? "text-pistachio-depth" : undefined}>
                     {money(after)}
                   </td>
                   <td>
@@ -357,7 +369,13 @@ function WhatIfSimulator({ data }: { data: MenuData }) {
                   <td>
                     <MarginBadge pct={marginPct(p.price_cents, after)} />
                   </td>
-                  <td>{keepPrice != null && override ? money(Math.ceil(keepPrice / 25) * 25) : "—"}</td>
+                  <td>
+                    {keepPrice != null && override ? (
+                      <span className="tag bg-butter-soft text-cocoa">{money(Math.ceil(keepPrice / 25) * 25)}</span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               );
             })}
