@@ -16,20 +16,23 @@ import { money, timeAgo } from "../../lib/format";
 import { supabase, type Enums } from "../../lib/supabase";
 
 const COLORS = {
-  terracotta: "#c2603a",
-  sage: "#6b8f4e",
-  berry: "#c8343a",
-  muted: "#7a6656",
-  gold: "#d9a441",
+  jam: "#D4335A",
+  blueberry: "#2672C9",
+  butter: "#FFC93C",
+  pistachio: "#58B85F",
+  cinnamon: "#8A6A58",
+  crumb: "#E8DDCC",
 };
 
 const SOURCE_COLORS: Record<Enums<"order_source">, string> = {
-  walk_in: COLORS.terracotta,
-  online: COLORS.sage,
-  phone: COLORS.gold,
-  voice_agent: COLORS.berry,
-  b2b: COLORS.muted,
+  walk_in: COLORS.jam,
+  online: COLORS.blueberry,
+  phone: COLORS.butter,
+  voice_agent: COLORS.pistachio,
+  b2b: COLORS.cinnamon,
 };
+
+const AXIS = { stroke: COLORS.cinnamon, fontSize: 12, fontWeight: 700 };
 
 const SOURCE_LABELS: Record<Enums<"order_source">, string> = {
   walk_in: "Walk-in",
@@ -130,33 +133,39 @@ export default function Marketing() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-bold">Marketing</h1>
-        <p className="text-muted">How the bakery is doing over the last 30 days</p>
+        <p className="eyebrow">Last 30 days</p>
+        <h1 className="text-4xl font-black">Marketing</h1>
+        <p className="mt-1 text-cinnamon">How the bakery is doing, and who to bring back.</p>
       </header>
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Kpi label="Revenue (30d)" value={money(revenue30)} />
+        <Kpi label="Revenue (30d)" value={money(revenue30)} accent />
         <Kpi label="Orders (30d)" value={orders30.toLocaleString()} />
         <Kpi label="Avg order" value={money(avgOrder)} />
         <Kpi label="Repeat customers" value={`${Math.round(repeatRate * 100)}%`} hint={`${buyers.length} buyers`} />
       </section>
 
       <section className="card">
-        <h2 className="mb-4 text-xl font-bold">Revenue by day</h2>
+        <h2 className="mb-4 text-xl font-extrabold">Revenue by day</h2>
         {revenueByDay.length === 0 ? (
           <Empty>No sales in the last 30 days yet.</Empty>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={revenueByDay}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1e2c7" />
+              <CartesianGrid vertical={false} stroke={COLORS.crumb} />
               <XAxis
                 dataKey="day"
                 tickFormatter={(d: string) => new Date(`${d}T00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                stroke={COLORS.muted}
+                tick={AXIS}
+                axisLine={false}
+                tickLine={false}
               />
-              <YAxis tickFormatter={(v: number) => `$${v}`} stroke={COLORS.muted} />
-              <Tooltip formatter={(v) => `$${Number(v).toFixed(2)}`} />
-              <Legend />
+              <YAxis tickFormatter={(v: number) => `$${v}`} tick={AXIS} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(v) => `$${Number(v).toFixed(2)}`}
+                contentStyle={{ borderRadius: 16, border: `2px solid ${COLORS.crumb}`, fontWeight: 700 }}
+              />
+              <Legend wrapperStyle={{ fontWeight: 800 }} />
               {sources.map((s) => (
                 <Area
                   key={s}
@@ -165,8 +174,9 @@ export default function Marketing() {
                   name={SOURCE_LABELS[s]}
                   stackId="revenue"
                   stroke={SOURCE_COLORS[s]}
+                  strokeWidth={3}
                   fill={SOURCE_COLORS[s]}
-                  fillOpacity={0.35}
+                  fillOpacity={0.3}
                 />
               ))}
             </AreaChart>
@@ -176,28 +186,32 @@ export default function Marketing() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="card lg:col-span-2">
-          <h2 className="mb-4 text-xl font-bold">Top products</h2>
+          <h2 className="mb-4 text-xl font-extrabold">Top products</h2>
           {topProducts.length === 0 ? (
             <Empty>No product sales yet.</Empty>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={topProducts} layout="vertical" margin={{ left: 24 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1e2c7" horizontal={false} />
-                <XAxis type="number" tickFormatter={(v: number) => `$${v}`} stroke={COLORS.muted} />
-                <YAxis type="category" dataKey="name" width={140} stroke={COLORS.muted} />
-                <Tooltip formatter={(v, name) => (name === "revenue" ? `$${Number(v).toFixed(2)}` : v)} />
-                <Bar dataKey="revenue" fill={COLORS.terracotta} radius={[0, 6, 6, 0]} />
+                <CartesianGrid stroke={COLORS.crumb} horizontal={false} />
+                <XAxis type="number" tickFormatter={(v: number) => `$${v}`} tick={AXIS} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" width={140} tick={AXIS} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: "#F6EFE4" }}
+                  formatter={(v, name) => (name === "revenue" ? `$${Number(v).toFixed(2)}` : v)}
+                  contentStyle={{ borderRadius: 16, border: `2px solid ${COLORS.crumb}`, fontWeight: 700 }}
+                />
+                <Bar dataKey="revenue" fill={COLORS.jam} radius={[0, 12, 12, 0]} barSize={28} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </section>
 
-        <section className="card border-terracotta/30 bg-gradient-to-br from-white to-crust/60">
-          <p className="label">🍂 Flavor of the month</p>
+        <section className="rounded-3xl border-2 border-butter-depth bg-butter-soft p-6 shadow-[0_4px_0_var(--color-butter-depth)]">
+          <span className="tag bg-butter text-cocoa">🍂 Flavor of the month</span>
           {flavor ? (
             <>
-              <h2 className="text-2xl font-bold">{flavor.name}</h2>
-              <p className="mb-4 text-sm text-muted">{flavor.description}</p>
+              <h2 className="mt-3 text-2xl font-black">{flavor.name}</h2>
+              <p className="mb-4 text-sm text-cinnamon">{flavor.description}</p>
               <dl className="grid grid-cols-2 gap-3">
                 <Stat label="Units sold" value={(flavorSales?.units ?? 0).toLocaleString()} />
                 <Stat label="Revenue" value={money(flavorSales?.revenue_cents)} />
@@ -216,16 +230,24 @@ export default function Marketing() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="card">
-          <h2 className="mb-4 text-xl font-bold">Best customers</h2>
+          <h2 className="mb-4 text-xl font-extrabold">Best customers</h2>
           <ol className="space-y-2">
             {topCustomers.map((c, i) => (
-              <li key={c.id} className="flex items-center justify-between gap-2">
-                <span>
-                  <span className="mr-2 text-muted">{i + 1}.</span>
+              <li key={c.id} className="flex items-center justify-between gap-2 rounded-2xl bg-dough px-3 py-2">
+                <span className="font-bold">
+                  <span
+                    className={`mr-2 inline-flex size-7 items-center justify-center rounded-full text-sm font-black ${
+                      i === 0 ? "bg-butter text-cocoa" : "bg-white text-cinnamon"
+                    }`}
+                  >
+                    {i + 1}
+                  </span>
                   {c.name}
-                  {c.is_b2b && <span className="ml-1 text-xs text-sage">({c.organization || "B2B"})</span>}
+                  {c.is_b2b && (
+                    <span className="tag ml-2 bg-blueberry-soft text-blueberry-depth">{c.organization || "B2B"}</span>
+                  )}
                 </span>
-                <span className="font-semibold">{money(c.lifetime_cents)}</span>
+                <span className="font-black">{money(c.lifetime_cents)}</span>
               </li>
             ))}
           </ol>
@@ -233,20 +255,20 @@ export default function Marketing() {
         </section>
 
         <section className="card">
-          <h2 className="mb-1 text-xl font-bold">Regulars to win back</h2>
-          <p className="mb-4 text-sm text-muted">3+ orders, but nothing in 30 days</p>
+          <h2 className="mb-1 text-xl font-extrabold">Regulars to win back</h2>
+          <p className="mb-4 text-sm text-cinnamon">3+ orders, but nothing in 30 days</p>
           <ul className="space-y-3">
             {lapsedRegulars.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-2">
+              <li key={c.id} className="flex items-center justify-between gap-2 rounded-2xl bg-jam-soft px-3 py-2">
                 <div>
-                  <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-muted">
+                  <div className="font-extrabold text-jam-depth">{c.name}</div>
+                  <div className="text-xs text-cinnamon">
                     Last order {c.last_order_at ? timeAgo(c.last_order_at) : "never"} · {c.order_count} orders
                   </div>
                 </div>
                 {c.email && (
                   <a
-                    className="btn-ghost px-3 py-2 text-sm"
+                    className="btn-ghost bg-white px-3 py-2 text-xs text-jam"
                     href={`mailto:${c.email}?subject=${encodeURIComponent("We miss you at Grandma's Bakery!")}&body=${encodeURIComponent(
                       `Hi ${c.name},\n\nIt's been a while! Come by this week and your next parfait is on us.\n\n— Grandma`,
                     )}`}
@@ -260,14 +282,14 @@ export default function Marketing() {
           {lapsedRegulars.length === 0 && <Empty>Everyone's been in recently 🎉</Empty>}
         </section>
 
-        <section className="card border-dashed">
-          <h2 className="mb-1 text-xl font-bold">Reviews</h2>
-          <p className="mb-4 text-sm text-muted">Google Maps & Yelp</p>
-          <div className="rounded-xl bg-cream p-4 text-center">
+        <section className="card">
+          <h2 className="mb-1 text-xl font-extrabold">Reviews</h2>
+          <p className="mb-4 text-sm text-cinnamon">Google Maps & Yelp</p>
+          <div className="rounded-2xl border-2 border-dashed border-crumb bg-dough p-5 text-center">
             <p className="text-3xl">⭐️</p>
-            <p className="mt-2 font-medium">Connect Google Business Profile</p>
-            <p className="text-sm text-muted">Coming soon: see new reviews and reply right from here.</p>
-            <button className="btn-ghost mt-4" disabled>
+            <p className="mt-2 font-extrabold">Connect Google Business Profile</p>
+            <p className="text-sm text-cinnamon">Coming soon: see new reviews and reply right from here.</p>
+            <button className="btn-blue mt-4" disabled>
               Connect
             </button>
           </div>
@@ -277,12 +299,12 @@ export default function Marketing() {
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Kpi({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: boolean }) {
   return (
-    <div className="card">
-      <p className="label">{label}</p>
-      <p className="font-display text-3xl font-bold">{value}</p>
-      {hint && <p className="text-xs text-muted">{hint}</p>}
+    <div className="card p-5">
+      <p className="text-sm font-extrabold text-cocoa">{label}</p>
+      <p className={`mt-1 text-3xl font-black ${accent ? "text-jam" : "text-cocoa"}`}>{value}</p>
+      {hint && <p className="mt-1 text-sm font-bold text-cinnamon">{hint}</p>}
     </div>
   );
 }
@@ -290,12 +312,12 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="text-lg font-semibold">{value}</dd>
+      <dt className="text-xs font-extrabold text-cinnamon">{label}</dt>
+      <dd className="text-xl font-black">{value}</dd>
     </div>
   );
 }
 
 function Empty({ children }: { children: ReactNode }) {
-  return <p className="py-6 text-center text-muted">{children}</p>;
+  return <p className="py-6 text-center text-cinnamon">{children}</p>;
 }

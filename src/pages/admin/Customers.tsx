@@ -50,10 +50,11 @@ export default function Customers() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Customers</h1>
-          <p className="text-muted">{customers.length} people who love your parfaits</p>
+          <p className="eyebrow">Customer relationships</p>
+          <h1 className="text-4xl font-black">Customers</h1>
+          <p className="mt-1 text-cinnamon">{customers.length} people who love your parfaits</p>
         </div>
         <button className="btn-primary" onClick={() => setAdding(true)}>
           + Add customer
@@ -71,7 +72,7 @@ export default function Customers() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={filter === f.key ? "btn-primary" : "btn-ghost"}
+            className={filter === f.key ? "chip-active" : "chip"}
           >
             {f.label}
           </button>
@@ -93,14 +94,14 @@ export default function Customers() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} className="text-muted">
+                <td colSpan={6} className="text-cinnamon">
                   Loading…
                 </td>
               </tr>
             )}
             {!isLoading && visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-muted">
+                <td colSpan={6} className="text-cinnamon">
                   No customers match.
                 </td>
               </tr>
@@ -109,29 +110,25 @@ export default function Customers() {
               <tr
                 key={c.id}
                 onClick={() => setSelectedId(c.id)}
-                className="cursor-pointer hover:bg-cream"
+                className="cursor-pointer hover:bg-dough/70"
               >
-                <td className="font-medium">
+                <td className="font-extrabold">
                   {c.name}
                   {c.is_b2b && (
-                    <span className="ml-2 rounded-full bg-sage/15 px-2 py-0.5 text-xs font-semibold text-sage">
-                      {c.organization || "B2B"}
-                    </span>
+                    <span className="tag ml-2 bg-blueberry-soft text-blueberry-depth">{c.organization || "B2B"}</span>
                   )}
-                  {isRegular(c) && !c.is_b2b && (
-                    <span className="ml-2 rounded-full bg-terracotta/10 px-2 py-0.5 text-xs font-semibold text-terracotta">
-                      Regular
-                    </span>
-                  )}
+                  {isRegular(c) && !c.is_b2b && <span className="tag ml-2 bg-butter text-cocoa">Regular</span>}
                 </td>
-                <td className="text-muted">
+                <td className="text-cinnamon">
                   <div>{c.email}</div>
                   <div>{c.phone}</div>
                 </td>
                 <td className="text-right">{c.order_count ?? 0}</td>
-                <td className="text-right">{money(c.lifetime_cents)}</td>
-                <td className="text-right">{c.loyalty_points ?? 0}</td>
-                <td className="text-muted">{c.last_order_at ? timeAgo(c.last_order_at) : "Never"}</td>
+                <td className="text-right font-extrabold">{money(c.lifetime_cents)}</td>
+                <td className="text-right">
+                  <span className="tag bg-butter-soft text-cocoa">★ {c.loyalty_points ?? 0}</span>
+                </td>
+                <td className="text-cinnamon">{c.last_order_at ? timeAgo(c.last_order_at) : "Never"}</td>
               </tr>
             ))}
           </tbody>
@@ -146,14 +143,14 @@ export default function Customers() {
 
 function Drawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-ink/30" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex justify-end bg-cocoa/30" onClick={onClose}>
       <aside
-        className="h-full w-full max-w-lg overflow-y-auto bg-cream p-6 shadow-xl"
+        className="h-full w-full max-w-lg overflow-y-auto border-l-2 border-crumb bg-flour p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">{title}</h2>
-          <button className="btn-ghost px-3 py-2" onClick={onClose} aria-label="Close">
+          <h2 className="text-3xl font-black">{title}</h2>
+          <button className="btn-icon" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
@@ -263,7 +260,7 @@ function AddCustomer({ onClose, onCreated }: { onClose: () => void; onCreated: (
     <Drawer title="New customer" onClose={onClose}>
       <form onSubmit={submit} className="space-y-6">
         <CustomerFields form={form} setForm={setForm} />
-        {create.error && <p className="text-berry">{create.error.message}</p>}
+        {create.error && <p className="text-jam">{create.error.message}</p>}
         <button className="btn-primary w-full" disabled={create.isPending}>
           {create.isPending ? "Saving…" : "Add customer"}
         </button>
@@ -327,7 +324,7 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
   if (!customer) {
     return (
       <Drawer title="Loading…" onClose={onClose}>
-        <p className="text-muted">Loading…</p>
+        <p className="text-cinnamon">Loading…</p>
       </Drawer>
     );
   }
@@ -335,16 +332,16 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
   return (
     <Drawer title={customer.name} onClose={onClose}>
       <div className="space-y-6">
-        <section className="card flex items-center justify-between">
+        <section className="flex items-center justify-between rounded-3xl border-2 border-butter-depth bg-butter-soft p-5 shadow-[0_4px_0_var(--color-butter-depth)]">
           <div>
-            <p className="label">Loyalty points</p>
-            <p className="font-display text-4xl font-bold text-terracotta">{customer.loyalty_points}</p>
+            <p className="eyebrow">Loyalty points</p>
+            <p className="text-4xl font-black text-cocoa">★ {customer.loyalty_points}</p>
           </div>
           <div className="flex gap-2">
             {[-10, -1, 1, 10].map((d) => (
               <button
                 key={d}
-                className="btn-ghost px-3"
+                className="btn-icon w-auto px-3 text-sm"
                 disabled={adjustPoints.isPending}
                 onClick={() => adjustPoints.mutate(d)}
               >
@@ -362,23 +359,23 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
           className="space-y-4"
         >
           <CustomerFields form={form} setForm={setForm} />
-          {save.error && <p className="text-berry">{save.error.message}</p>}
+          {save.error && <p className="text-jam">{save.error.message}</p>}
           <button className="btn-primary w-full" disabled={save.isPending}>
             {save.isPending ? "Saving…" : save.isSuccess ? "Saved ✓" : "Save changes"}
           </button>
         </form>
 
         <section>
-          <h3 className="mb-3 text-xl font-bold">Order history</h3>
-          {orders.length === 0 && <p className="text-muted">No orders yet.</p>}
+          <h3 className="mb-3 text-xl font-extrabold">Order history</h3>
+          {orders.length === 0 && <p className="text-cinnamon">No orders yet.</p>}
           <ul className="space-y-2">
             {orders.map((o) => (
               <li key={o.id} className="card p-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold">#{o.order_number}</span>
-                  <span className="font-semibold">{money(o.total_cents)}</span>
+                  <span className="font-black">#{o.order_number}</span>
+                  <span className="font-black">{money(o.total_cents)}</span>
                 </div>
-                <div className="text-sm text-muted">
+                <div className="text-sm text-cinnamon">
                   {date(o.created_at)} · {o.source.replace("_", " ")} · {o.status.replace("_", " ")}
                 </div>
                 <div className="mt-1 text-sm">
