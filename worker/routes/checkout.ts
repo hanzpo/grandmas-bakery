@@ -9,7 +9,7 @@ const CheckoutBody = z.object({
     phone: z.string().max(30).optional(),
     marketing_opt_in: z.boolean().optional(),
   }),
-  items: z.array(z.object({ product_id: z.uuid(), quantity: z.number().int().min(1).max(100) })).min(1),
+  items: z.array(z.object({ product_id: z.guid(), quantity: z.number().int().min(1).max(100) })).min(1),
   pickup_at: z.iso.datetime({ offset: true }).optional(),
   notes: z.string().max(500).optional(),
 });
