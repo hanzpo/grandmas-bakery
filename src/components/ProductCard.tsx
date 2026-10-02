@@ -27,7 +27,7 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
       <div className={`relative flex h-[84px] w-[84px] shrink-0 items-center justify-center rounded-2xl ${tint}`}>
         <Icon className="h-14 w-14" />
         {item.is_flavor_of_month && (
-          <span className="absolute -top-1.5 -left-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-butter text-xs font-black text-cocoa shadow-[0_2px_0_var(--color-butter-depth)]" aria-label="Grandma's pick">★</span>
+          <span className="absolute -top-1.5 -left-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-butter text-xs font-black text-cocoa shadow-[0_2px_0_var(--color-butter-depth)]" aria-label={t("grandmasPick")}>★</span>
         )}
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -41,14 +41,14 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
           {onChange &&
             (quantity > 0 ? (
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-pistachio bg-pistachio-soft p-0.5">
-                <button type="button" aria-label="Remove one" className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity - 1)}>−</button>
+                <button type="button" aria-label={t("removeOne")} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity - 1)}>−</button>
                 <span className="w-5 text-center font-black text-pistachio-depth">{quantity}</span>
-                <button type="button" aria-label="Add one" className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity + 1)}>+</button>
+                <button type="button" aria-label={t("addOne")} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity + 1)}>+</button>
               </div>
             ) : (
               <button
                 type="button"
-                aria-label={`${t("add")} ${name}`}
+                aria-label={t("addItem", { name })}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-jam text-2xl font-black text-white shadow-[0_3px_0_var(--color-jam-depth)] active:translate-y-0.5 active:shadow-[0_1px_0_var(--color-jam-depth)]"
                 onClick={() => onChange(1)}
               >
@@ -63,7 +63,7 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
       <div className={`relative flex h-36 items-center justify-center rounded-2xl ${tint}`}>
         <Icon className="h-24 w-24" />
         {item.is_flavor_of_month && (
-          <span className="tag absolute top-2.5 left-2.5 bg-butter-soft text-butter-depth">Grandma's pick</span>
+          <span className="tag absolute top-2.5 left-2.5 bg-butter-soft text-butter-depth">{t("grandmasPick")}</span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1">
@@ -79,16 +79,16 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
           <div className="flex h-12 items-center justify-between rounded-[14px] border-2 border-pistachio bg-pistachio-soft px-1.5">
             <button
               type="button"
-              aria-label="Remove one"
+              aria-label={t("removeOne")}
               className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white text-xl font-black text-cocoa"
               onClick={() => onChange(quantity - 1)}
             >
               −
             </button>
-            <span className="font-black text-pistachio-depth">{quantity} in cart</span>
+            <span className="font-black text-pistachio-depth">{t("inCart", { count: quantity })}</span>
             <button
               type="button"
-              aria-label="Add one"
+              aria-label={t("addOne")}
               className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white text-xl font-black text-cocoa"
               onClick={() => onChange(quantity + 1)}
             >
