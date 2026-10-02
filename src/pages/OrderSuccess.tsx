@@ -1,4 +1,5 @@
 import { BAKERY } from "../lib/bakery";
+import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router";
 import { BunBunHappy } from "../components/illustrations";
 
@@ -31,6 +32,12 @@ const ICONS = {
 };
 
 export default function OrderSuccess() {
+  // Paid: start the next visit with an empty cart.
+  useEffect(() => {
+    try {
+      localStorage.removeItem("cart");
+    } catch {}
+  }, []);
   const [params] = useSearchParams();
   const order = params.get("order");
 

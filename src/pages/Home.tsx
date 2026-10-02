@@ -43,11 +43,12 @@ export default function Home() {
   const { setCount } = useCartCount();
   const [active, setActive] = useState("");
   const railRef = useRef<HTMLElement>(null);
-  const [cart, setCart] = useState<Record<string, number>>({});
+  // Cart + details survive the round trip to Stripe (and reloads).
+  const [cart, setCart] = useStoredState<Record<string, number>>("cart", {});
   const [step, setStep] = useState<"cart" | "details">("cart");
   // Phones/tablets: the cart opens as a bottom sheet instead of living at the end of the menu.
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", pickup_at: "", notes: "", marketing_opt_in: false });
+  const [form, setForm] = useStoredState("checkout-form", { name: "", email: "", phone: "", pickup_at: "", notes: "", marketing_opt_in: false });
 
   const items = menu.data ?? [];
   // Kiosk sections: known categories in menu order, anything new after them.
@@ -418,4 +419,21 @@ export default function Home() {
       </section>
     </>
   );
+}
+
+function useStoredState<T>(key: string, initial: T) {
+  const [value, setValue] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? (JSON.parse(saved) as T) : initial;
+    } catch {
+      return initial;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  }, [key, value]);
+  return [value, setValue] as const;
 }
