@@ -7,6 +7,8 @@ type CallStatus = Database["public"]["Enums"]["supply_call_status"];
 type RunStatus = Database["public"]["Enums"]["supply_run_status"];
 
 const OUTBOUND_URL = "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
+/** Inventory "Call grocery store" always dials this number. */
+const GROCERY_STORE_E164 = "+16479662880";
 const TERMINAL_QUOTE = new Set<CallStatus>(["quoted", "failed", "skipped"]);
 const NOT_DIALABLE =
   "Not a dialable phone number. A 10-digit US number is rewritten to +1; numbers like 555-0101 are not dialable.";
@@ -43,7 +45,7 @@ type QuoteInput = { name: string; available: boolean; price?: number | null };
 type ToolOk = { ok: true; body: Record<string, unknown> };
 type ToolErr = { ok: false; status: 400; error: string };
 
-/** 10-digit US numbers become +1. Fictional 555-01xx and short seed numbers are not dialable. */
+/** 10-digit US and Canadian numbers become +1. Fictional 555-01xx and short seed numbers are not dialable. */
 export function toE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -70,6 +72,93 @@ export function toE164(raw: string | null | undefined): string | null {
 /** Dollars per unit → cents, keeping fractional cents (0.009 dollars is 0.9 cents). */
 export function dollarsToCents(dollars: number) {
   return Math.round(dollars * 1_000_000) / 10_000;
+}
+
+export type StoreCallResult = {
+  called: boolean;
+  to_number: string;
+  error: string | null;
+  run: SupplyRunView | null;
+};
+
+/** One outbound Bun Bun call to the grocery store, for a price quote on whatever is low. */
+export async function callGroceryStore(env: Env): Promise<StoreCallResult> {
+  const db = adminDb(env);
+  const supplier = await ensureGroceryStore(db);
+  const lines = await linesToBuy(db);
+  const active = await findActive(db);
+  const shopping_list = lines.length
+    ? shoppingList(lines, false)
+    : "No ingredients are below the reorder point. Confirm this is the grocery store.";
+
+  if (active || lines.length === 0) {
+    const result = await placeOutbound(env, GROCERY_STORE_E164, {
+      call_purpose: "quote",
+      supplier_name: supplier.name,
+      supplier_id: supplier.id,
+      run_id: active?.id ?? "unset",
+      shopping_list,
+    });
+    return {
+      called: result.ok,
+      to_number: GROCERY_STORE_E164,
+      error: result.error,
+      run: active ? await present(db, active.id) : null,
+    };
+  }
+
+  const inserted = await db.from("supply_runs").insert({ status: "quoting", trigger: "manual" }).select("id").single();
+  if (inserted.error) {
+    if (inserted.error.code === "23505") {
+      const again = await findActive(db);
+      const result = await placeOutbound(env, GROCERY_STORE_E164, {
+        call_purpose: "quote",
+        supplier_name: supplier.name,
+        supplier_id: supplier.id,
+        run_id: again?.id ?? "unset",
+        shopping_list,
+      });
+      return {
+        called: result.ok,
+        to_number: GROCERY_STORE_E164,
+        error: result.error,
+        run: again ? await present(db, again.id) : null,
+      };
+    }
+    throw inserted.error;
+  }
+
+  const runId = inserted.data.id;
+  const { error: itemError } = await db.from("supply_run_items").insert(
+    lines.map((line) => ({ run_id: runId, ingredient_id: line.id, quantity: line.quantity })),
+  );
+  if (itemError) throw itemError;
+
+  await startQuoteCall(db, env, runId, { id: supplier.id, name: supplier.name, phone: GROCERY_STORE_E164 }, lines);
+  await maybeAdvance(db, env, runId);
+  const run = await present(db, runId);
+  const call = run.calls.find((row) => row.purpose === "quote");
+  const called = call?.status === "dialing";
+  return {
+    called,
+    to_number: GROCERY_STORE_E164,
+    error: called ? null : call?.error ?? "The call was not placed.",
+    run,
+  };
+}
+
+async function ensureGroceryStore(db: Db) {
+  const { data, error } = await db.from("suppliers").select("id, name, phone");
+  if (error) throw error;
+  const match = data.find((row) => toE164(row.phone) === GROCERY_STORE_E164);
+  if (match) return match;
+  const inserted = await db
+    .from("suppliers")
+    .insert({ name: "Grocery store", phone: GROCERY_STORE_E164, is_local: true, notes: "Called from the inventory page." })
+    .select("id, name, phone")
+    .single();
+  if (inserted.error) throw inserted.error;
+  return inserted.data;
 }
 
 export async function startReclaim(env: Env, trigger: "manual" | "poll"): Promise<ReclaimResult> {
@@ -425,15 +514,23 @@ async function dialOrder(db: Db, env: Env, runId: string, supplierId: string) {
 }
 
 async function dial(db: Db, env: Env, callId: string, toNumber: string, variables: Record<string, string>) {
+  const result = await placeOutbound(env, toNumber, variables);
+  if (!result.ok) {
+    await markCall(db, callId, { status: "failed", error: result.error });
+    return { ok: false as const, error: result.error };
+  }
+  await markCall(db, callId, { status: "dialing", conversation_id: result.conversationId, error: null });
+  return { ok: true as const, error: null };
+}
+
+async function placeOutbound(env: Env, toNumber: string, variables: Record<string, string>) {
   const missing = [
     !env.ELEVENLABS_API_KEY ? "ELEVENLABS_API_KEY" : null,
     !env.SUPPLY_AGENT_ID ? "SUPPLY_AGENT_ID" : null,
     !env.SUPPLY_PHONE_NUMBER_ID ? "SUPPLY_PHONE_NUMBER_ID" : null,
   ].filter((name): name is string => name != null);
   if (missing.length) {
-    const error = `Missing ${missing.join(", ")}. The call was not placed.`;
-    await markCall(db, callId, { status: "failed", error });
-    return { ok: false as const, error };
+    return { ok: false as const, error: `Missing ${missing.join(", ")}. The call was not placed.`, conversationId: null };
   }
 
   try {
@@ -453,16 +550,11 @@ async function dial(db: Db, env: Env, callId: string, toNumber: string, variable
     const body: unknown = await res.json().catch(() => null);
     const success = body && typeof body === "object" && "success" in body ? (body as { success: unknown }).success : true;
     if (!res.ok || success === false) {
-      const error = clip(apiErrorMessage(body, res.status));
-      await markCall(db, callId, { status: "failed", error });
-      return { ok: false as const, error };
+      return { ok: false as const, error: clip(apiErrorMessage(body, res.status)), conversationId: null };
     }
-    await markCall(db, callId, { status: "dialing", conversation_id: conversationIdOf(body), error: null });
-    return { ok: true as const, error: null };
+    return { ok: true as const, error: null, conversationId: conversationIdOf(body) };
   } catch (err) {
-    const error = clip(err instanceof Error ? err.message : "Outbound call failed.");
-    await markCall(db, callId, { status: "failed", error });
-    return { ok: false as const, error };
+    return { ok: false as const, error: clip(err instanceof Error ? err.message : "Outbound call failed."), conversationId: null };
   }
 }
 
