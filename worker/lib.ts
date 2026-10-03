@@ -23,7 +23,11 @@ export async function upsertCustomer(
   if (email || phone) {
     const filter = [email && `email.eq.${email}`, phone && `phone.eq.${phone}`].filter(Boolean).join(",");
     const { data: existing } = await db.from("customers").select("id").or(filter).limit(1).maybeSingle();
-    if (existing) return existing.id;
+    if (existing) {
+      // A returning customer ticking "send me specials" subscribes them (never unsubscribes).
+      if (c.marketing_opt_in) await db.from("customers").update({ marketing_opt_in: true }).eq("id", existing.id);
+      return existing.id;
+    }
   }
   const { data, error } = await db
     .from("customers")

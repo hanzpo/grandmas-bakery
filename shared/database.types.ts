@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.18"
+  }
   public: {
     Tables: {
       customers: {
@@ -22,6 +27,7 @@ export type Database = {
           organization: string | null
           phone: string | null
           preferred_language: string
+          unsubscribe_token: string
         }
         Insert: {
           created_at?: string
@@ -35,6 +41,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           preferred_language?: string
+          unsubscribe_token?: string
         }
         Update: {
           created_at?: string
@@ -48,6 +55,7 @@ export type Database = {
           organization?: string | null
           phone?: string | null
           preferred_language?: string
+          unsubscribe_token?: string
         }
         Relationships: []
       }
@@ -231,6 +239,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      newsletter_issues: {
+        Row: {
+          failed: number
+          id: string
+          note: string | null
+          recipients: number
+          sent_at: string
+          sent_by: string | null
+          subject: string
+        }
+        Insert: {
+          failed?: number
+          id?: string
+          note?: string | null
+          recipients?: number
+          sent_at?: string
+          sent_by?: string | null
+          subject: string
+        }
+        Update: {
+          failed?: number
+          id?: string
+          note?: string | null
+          recipients?: number
+          sent_at?: string
+          sent_by?: string | null
+          subject?: string
+        }
+        Relationships: []
       }
       order_items: {
         Row: {
@@ -1156,7 +1194,13 @@ export type Database = {
       payment_method: "stripe" | "card_terminal" | "cash" | "invoice"
       supplier_order_status: "ordered" | "arrived" | "cancelled"
       supply_call_purpose: "quote" | "order"
-      supply_call_status: "pending" | "dialing" | "quoted" | "ordered" | "failed" | "skipped"
+      supply_call_status:
+        | "pending"
+        | "dialing"
+        | "quoted"
+        | "ordered"
+        | "failed"
+        | "skipped"
       supply_run_status: "quoting" | "ordering" | "placed" | "failed"
       ugc_video_status: "queued" | "generating" | "ready" | "failed"
     }
@@ -1300,10 +1344,16 @@ export const Constants = {
       payment_method: ["stripe", "card_terminal", "cash", "invoice"],
       supplier_order_status: ["ordered", "arrived", "cancelled"],
       supply_call_purpose: ["quote", "order"],
-      supply_call_status: ["pending", "dialing", "quoted", "ordered", "failed", "skipped"],
+      supply_call_status: [
+        "pending",
+        "dialing",
+        "quoted",
+        "ordered",
+        "failed",
+        "skipped",
+      ],
       supply_run_status: ["quoting", "ordering", "placed", "failed"],
       ugc_video_status: ["queued", "generating", "ready", "failed"],
     },
   },
 } as const
-
