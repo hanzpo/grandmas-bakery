@@ -16,7 +16,7 @@ export function useIngredients() {
   return useQuery({
     queryKey: ["ingredients"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("ingredients").select("*, suppliers(name)").order("name");
+      const { data, error } = await supabase.from("ingredients").select("*, suppliers:suppliers!ingredients_preferred_supplier_id_fkey(name)").order("name");
       if (error) throw error;
       return data;
     },
