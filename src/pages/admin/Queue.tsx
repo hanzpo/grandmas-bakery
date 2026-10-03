@@ -200,6 +200,7 @@ export default function Queue() {
       const p = pending.current;
       if (p && !drag) {
         if (Math.hypot(e.clientX - p.startX, e.clientY - p.startY) < 8) return;
+        window.getSelection()?.removeAllRanges();
         const rect = p.el.getBoundingClientRect();
         setDrag({
           id: p.id,
@@ -281,6 +282,7 @@ export default function Queue() {
                     button={col.button}
                     onGrab={(e) => {
                       if ((e.target as HTMLElement).closest("button")) return;
+                      e.preventDefault(); // don't start a text selection while dragging
                       pending.current = { id: order.id, from: order.status, startX: e.clientX, startY: e.clientY, el: e.currentTarget };
                     }}
                     onAdvance={() => setStatus.mutate({ id: order.id, status: col.next })}
@@ -376,7 +378,7 @@ function OrderCard({
   return (
     <article
       onPointerDown={onGrab}
-      className={`card relative cursor-grab touch-none space-y-3 p-5 transition-opacity ${dragging ? "opacity-30" : ""} ${
+      className={`card relative cursor-grab touch-none select-none space-y-3 p-5 transition-opacity ${dragging ? "opacity-30" : ""} ${
         fresh ? "animate-pulse ring-4 ring-jam/50" : ""
       }`}
     >
