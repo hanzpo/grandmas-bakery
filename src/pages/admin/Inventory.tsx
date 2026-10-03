@@ -205,7 +205,7 @@ function GroceryCalls() {
           </p>
           {latest.data.notes && <p className="mt-1 text-sm text-cinnamon">{latest.data.notes}</p>}
           <ul className="mt-2 space-y-1">
-            {latest.data.calls.map((call) => (
+            {latest.data.calls.filter((call) => !undialableSkip(call)).map((call) => (
               <li key={call.id} className="text-sm">
                 <span className="font-extrabold">{call.supplier_name ?? "Store"}</span>
                 <span className="text-cinnamon">
@@ -222,6 +222,10 @@ function GroceryCalls() {
       )}
     </section>
   );
+}
+
+function undialableSkip(call: GroceryCall) {
+  return call.status === "skipped" && (call.error ?? "").startsWith("Not a dialable phone number.");
 }
 
 function supplierLabel(suppliers: { name: string } | { name: string }[] | null) {
