@@ -1,3 +1,5 @@
+Built for the Socratica x Ramp Hackathon
+
 # Grandma's Bakery
 
 CRM for a one-woman parfait shop: online ordering (Stripe), a live order queue, order and
