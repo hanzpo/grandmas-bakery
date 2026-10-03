@@ -41,14 +41,8 @@ supply.post("/poll", async (c) => {
 });
 
 supply.post("/reclaim", async (c) => {
-  const token = /^Bearer\s+(\S+)/i.exec(c.req.header("authorization") ?? "")?.[1];
-  if (!token) return c.json({ error: "Sign in required." }, 401);
-  const db = adminDb(c.env);
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) return c.json({ error: "Sign in required." }, 401);
-  const staff = await db.from("staff").select("user_id").eq("user_id", data.user.id).maybeSingle();
-  if (staff.error) throw staff.error;
-  if (!staff.data) return c.json({ error: "Staff only." }, 403);
+  const denied = await requireStaff(c);
+  if (denied) return denied;
   return c.json(await startReclaim(c.env, "manual"));
 });
 
@@ -73,6 +67,18 @@ supply.post("/order", async (c) => {
   if (!result.ok) return c.json({ placed: false, error: result.error }, result.status);
   return c.json(result.body);
 });
+
+async function requireStaff(c: { env: Env; req: { header: (name: string) => string | undefined }; json: (body: unknown, status?: number) => Response }) {
+  const token = /^Bearer\s+(\S+)/i.exec(c.req.header("authorization") ?? "")?.[1];
+  if (!token) return c.json({ error: "Sign in required." }, 401);
+  const db = adminDb(c.env);
+  const { data, error } = await db.auth.getUser(token);
+  if (error || !data.user) return c.json({ error: "Sign in required." }, 401);
+  const staff = await db.from("staff").select("user_id").eq("user_id", data.user.id).maybeSingle();
+  if (staff.error) throw staff.error;
+  if (!staff.data) return c.json({ error: "Staff only." }, 403);
+  return null;
+}
 
 function authorized(expected: string | undefined, got: string | undefined) {
   if (!expected || !got) return false;

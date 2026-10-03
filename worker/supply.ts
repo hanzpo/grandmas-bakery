@@ -9,7 +9,7 @@ type RunStatus = Database["public"]["Enums"]["supply_run_status"];
 const OUTBOUND_URL = "https://api.elevenlabs.io/v1/convai/twilio/outbound-call";
 const TERMINAL_QUOTE = new Set<CallStatus>(["quoted", "failed", "skipped"]);
 const NOT_DIALABLE =
-  "Not a dialable phone number. A 10-digit US number is rewritten to +1; numbers like 555-0101 are not dialable.";
+  "Not a dialable phone number. A 10-digit US or Canadian number is rewritten to +1; numbers like 555-0101 are not dialable.";
 
 export type SupplyCallView = {
   id: string;
@@ -43,7 +43,7 @@ type QuoteInput = { name: string; available: boolean; price?: number | null };
 type ToolOk = { ok: true; body: Record<string, unknown> };
 type ToolErr = { ok: false; status: 400; error: string };
 
-/** 10-digit US numbers become +1. Fictional 555-01xx and short seed numbers are not dialable. */
+/** 10-digit US and Canadian numbers become +1. Fictional 555-01xx and short seed numbers are not dialable. */
 export function toE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
@@ -425,15 +425,23 @@ async function dialOrder(db: Db, env: Env, runId: string, supplierId: string) {
 }
 
 async function dial(db: Db, env: Env, callId: string, toNumber: string, variables: Record<string, string>) {
+  const result = await placeOutbound(env, toNumber, variables);
+  if (!result.ok) {
+    await markCall(db, callId, { status: "failed", error: result.error });
+    return { ok: false as const, error: result.error };
+  }
+  await markCall(db, callId, { status: "dialing", conversation_id: result.conversationId, error: null });
+  return { ok: true as const, error: null };
+}
+
+async function placeOutbound(env: Env, toNumber: string, variables: Record<string, string>) {
   const missing = [
     !env.ELEVENLABS_API_KEY ? "ELEVENLABS_API_KEY" : null,
     !env.SUPPLY_AGENT_ID ? "SUPPLY_AGENT_ID" : null,
     !env.SUPPLY_PHONE_NUMBER_ID ? "SUPPLY_PHONE_NUMBER_ID" : null,
   ].filter((name): name is string => name != null);
   if (missing.length) {
-    const error = `Missing ${missing.join(", ")}. The call was not placed.`;
-    await markCall(db, callId, { status: "failed", error });
-    return { ok: false as const, error };
+    return { ok: false as const, error: `Missing ${missing.join(", ")}. The call was not placed.`, conversationId: null };
   }
 
   try {
@@ -453,16 +461,11 @@ async function dial(db: Db, env: Env, callId: string, toNumber: string, variable
     const body: unknown = await res.json().catch(() => null);
     const success = body && typeof body === "object" && "success" in body ? (body as { success: unknown }).success : true;
     if (!res.ok || success === false) {
-      const error = clip(apiErrorMessage(body, res.status));
-      await markCall(db, callId, { status: "failed", error });
-      return { ok: false as const, error };
+      return { ok: false as const, error: clip(apiErrorMessage(body, res.status)), conversationId: null };
     }
-    await markCall(db, callId, { status: "dialing", conversation_id: conversationIdOf(body), error: null });
-    return { ok: true as const, error: null };
+    return { ok: true as const, error: null, conversationId: conversationIdOf(body) };
   } catch (err) {
-    const error = clip(err instanceof Error ? err.message : "Outbound call failed.");
-    await markCall(db, callId, { status: "failed", error });
-    return { ok: false as const, error };
+    return { ok: false as const, error: clip(err instanceof Error ? err.message : "Outbound call failed."), conversationId: null };
   }
 }
 
