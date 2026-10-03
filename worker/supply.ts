@@ -76,7 +76,8 @@ export async function startReclaim(env: Env, trigger: "manual" | "poll"): Promis
   const db = adminDb(env);
   const active = await findActive(db);
   if (active) {
-    return { started: false, reason: "already in progress", run: await present(db, active.id) };
+    const released = await releaseFinishedRun(db, env, active.id);
+    if (!released) return { started: false, reason: "already in progress", run: await present(db, active.id) };
   }
 
   const lines = await linesToBuy(db);
@@ -86,7 +87,11 @@ export async function startReclaim(env: Env, trigger: "manual" | "poll"): Promis
   if (inserted.error) {
     if (inserted.error.code === "23505") {
       const again = await findActive(db);
-      if (again) return { started: false, reason: "already in progress", run: await present(db, again.id) };
+      if (again) {
+        const released = await releaseFinishedRun(db, env, again.id);
+        if (!released) return { started: false, reason: "already in progress", run: await present(db, again.id) };
+        return startReclaim(env, trigger);
+      }
     }
     throw inserted.error;
   }
@@ -105,6 +110,94 @@ export async function startReclaim(env: Env, trigger: "manual" | "poll"): Promis
   }
   await maybeAdvance(db, env, runId);
   return { started: true, reason: null, run: await present(db, runId) };
+}
+
+const UNANSWERED_AFTER_MS = 90_000;
+const STUCK_AFTER_MS = 15 * 60_000;
+const UNANSWERED_QUOTE = "Nobody answered, so no price was recorded.";
+const UNANSWERED_ORDER = "Nobody answered, so the order was not placed.";
+const OPEN_CALL = new Set<CallStatus>(["pending", "dialing"]);
+const LIVE_CONVERSATION = new Set(["initiated", "in-progress"]);
+
+type CallProgress = {
+  status: string;
+  durationSecs: number;
+  hasAudio: boolean;
+  transcriptCount: number;
+};
+
+/** A missed call stays "dialing" because ElevenLabs can leave the conversation in progress with no transcript. */
+async function releaseFinishedRun(db: Db, env: Env, runId: string) {
+  const { data: calls, error } = await db
+    .from("supply_calls")
+    .select("id, purpose, status, conversation_id, created_at")
+    .eq("run_id", runId);
+  if (error) throw error;
+
+  const now = Date.now();
+  for (const call of calls ?? []) {
+    if (!OPEN_CALL.has(call.status)) continue;
+    const ageMs = now - new Date(call.created_at).getTime();
+    const progress = await loadCallProgress(env, call.conversation_id);
+    if (!callEndedWithoutResult(ageMs, progress)) continue;
+    await markCall(db, call.id, {
+      status: "failed",
+      error: call.purpose === "order" ? UNANSWERED_ORDER : UNANSWERED_QUOTE,
+    });
+  }
+
+  const { data: run, error: runError } = await db.from("supply_runs").select("status").eq("id", runId).single();
+  if (runError) throw runError;
+  if (run.status === "quoting") await maybeAdvance(db, env, runId);
+  else if (run.status === "ordering") await failOrderingRunIfCallsClosed(db, runId);
+
+  const after = await db.from("supply_runs").select("status").eq("id", runId).single();
+  if (after.error) throw after.error;
+  return after.data.status !== "quoting" && after.data.status !== "ordering";
+}
+
+async function failOrderingRunIfCallsClosed(db: Db, runId: string) {
+  const { data: calls, error } = await db.from("supply_calls").select("status").eq("run_id", runId).eq("purpose", "order");
+  if (error) throw error;
+  if ((calls ?? []).some((call) => OPEN_CALL.has(call.status) || call.status === "ordered")) return;
+  await failRun(db, runId, UNANSWERED_ORDER);
+}
+
+function callEndedWithoutResult(ageMs: number, progress: CallProgress | "missing" | "unknown") {
+  if (!Number.isFinite(ageMs) || ageMs < 0) return false;
+  if (progress === "missing") return ageMs >= UNANSWERED_AFTER_MS;
+  if (progress === "unknown") return ageMs >= STUCK_AFTER_MS;
+  if (!LIVE_CONVERSATION.has(progress.status)) return true;
+  const silent = !progress.hasAudio && progress.durationSecs === 0 && progress.transcriptCount === 0;
+  if (silent && ageMs >= UNANSWERED_AFTER_MS) return true;
+  return ageMs >= STUCK_AFTER_MS;
+}
+
+async function loadCallProgress(env: Env, conversationId: string | null): Promise<CallProgress | "missing" | "unknown"> {
+  if (!conversationId) return "missing";
+  if (!env.ELEVENLABS_API_KEY) return "unknown";
+  try {
+    const res = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${conversationId}`, {
+      headers: { "xi-api-key": env.ELEVENLABS_API_KEY },
+    });
+    if (res.status === 404) return "missing";
+    if (!res.ok) return "unknown";
+    return parseCallProgress(await res.json());
+  } catch {
+    return "unknown";
+  }
+}
+
+function parseCallProgress(body: unknown): CallProgress | "unknown" {
+  if (!body || typeof body !== "object") return "unknown";
+  const record = body as Record<string, unknown>;
+  const status = typeof record.status === "string" ? record.status : "";
+  if (!status) return "unknown";
+  const meta = record.metadata && typeof record.metadata === "object" ? (record.metadata as Record<string, unknown>) : {};
+  const durationSecs = typeof meta.call_duration_secs === "number" ? meta.call_duration_secs : 0;
+  const hasAudio = record.has_audio === true || record.has_response_audio === true || record.has_user_audio === true;
+  const transcriptCount = Array.isArray(record.transcript) ? record.transcript.length : 0;
+  return { status, durationSecs, hasAudio, transcriptCount };
 }
 
 export async function recordQuote(
