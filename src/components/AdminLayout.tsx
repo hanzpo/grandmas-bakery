@@ -14,6 +14,7 @@ const ICONS: Record<string, string> = {
   customers: "M9 11a4 4 0 1 0 0-8a4 4 0 1 0 0 8 M2 21a7 7 0 0 1 14 0 M16 3a4 4 0 0 1 0 8 M18 14a6 6 0 0 1 4 7",
   insights: "M4 20V10 M10 20V4 M16 20v-7 M22 20H2",
   marketing: "M3 6h13v12H3z M16 10l5-3v10l-5-3",
+  newsletter: "M3 5h18v14H3z M3 6l9 7 9-7",
 };
 
 function Icon({ name }: { name: keyof typeof ICONS }) {
@@ -33,6 +34,7 @@ const NAV: { to: string; label: string; icon: keyof typeof ICONS; end?: boolean;
   { to: "/admin/customers", label: "Customers", icon: "customers" },
   { to: "/admin/insights", label: "Insights", icon: "insights" },
   { to: "/admin/marketing", label: "Marketing", icon: "marketing" },
+  { to: "/admin/newsletter", label: "Newsletter", icon: "newsletter" },
 ];
 
 export function AdminLayout() {

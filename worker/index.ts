@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { checkout } from "./routes/checkout";
+import { newsletter } from "./routes/newsletter";
 import { stripeWebhook } from "./routes/stripe-webhook";
 import { supply } from "./routes/supply";
 import { ugcVideos } from "./routes/ugc-videos";
@@ -13,6 +14,7 @@ app.route("/stripe/webhook", stripeWebhook);
 app.route("/voice", voice);
 app.route("/supply", supply);
 app.route("/ugc-videos", ugcVideos);
+app.route("/newsletter", newsletter);
 
 app.onError((err, c) => {
   console.error(err);
