@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { adminDb } from "../lib";
-import { callGroceryStore, confirmSupplyOrder, recordQuote, startReclaim } from "../supply";
+import { confirmSupplyOrder, recordQuote, startReclaim } from "../supply";
 
 const QuoteBody = z.object({
   run_id: z.uuid(),
@@ -44,12 +44,6 @@ supply.post("/reclaim", async (c) => {
   const denied = await requireStaff(c);
   if (denied) return denied;
   return c.json(await startReclaim(c.env, "manual"));
-});
-
-supply.post("/call-store", async (c) => {
-  const denied = await requireStaff(c);
-  if (denied) return denied;
-  return c.json(await callGroceryStore(c.env));
 });
 
 supply.post("/quote", async (c) => {
