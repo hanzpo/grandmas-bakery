@@ -8,6 +8,10 @@ export const qty = (v: number | string | null | undefined) =>
 /** Dollars typed into an input → integer cents. */
 export const toCents = (dollars: string) => Math.round(Number(dollars) * 100);
 
+/** How much to buy to get back to twice the reorder level (at least one reorder level's worth). */
+export const restockAmount = (i: { quantity_on_hand: number | string; reorder_threshold: number | string }) =>
+  Math.ceil(Math.max(num(i.reorder_threshold) * 2 - num(i.quantity_on_hand), num(i.reorder_threshold)));
+
 export function useIngredients() {
   return useQuery({
     queryKey: ["ingredients"],
