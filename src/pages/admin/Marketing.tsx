@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { timeAgo } from "../../lib/format";
 import { supabase, type Enums, type Tables } from "../../lib/supabase";
 
@@ -128,15 +128,12 @@ export default function Marketing() {
 function VideoCard({ video, onRemove, onRetry }: { video: Video; onRemove: () => void; onRetry: () => void }) {
   const status = STATUS[video.status];
   return (
-    <article className="card flex flex-col gap-3">
-      <div className="grid aspect-[9/16] max-h-96 place-items-center overflow-hidden rounded-2xl bg-dough">
+    <article className="card flex min-w-0 flex-col gap-3">
+      <div className="grid aspect-[9/16] max-h-[32rem] w-full min-w-0 place-items-center overflow-hidden rounded-2xl bg-dough">
         {video.status === "ready" && video.video_url ? (
-          <video
+          <VideoPlayer
             src={video.video_url}
             poster={video.thumbnail_url ?? undefined}
-            controls
-            playsInline
-            className="h-full w-full object-cover"
           />
         ) : (
           <p className="px-6 text-center font-extrabold text-cinnamon">
@@ -173,4 +170,91 @@ function VideoCard({ video, onRemove, onRetry }: { video: Video; onRemove: () =>
       </div>
     </article>
   );
+}
+
+function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  function togglePlayback() {
+    const player = videoRef.current;
+    if (!player) return;
+
+    if (player.paused) {
+      void player.play();
+    } else {
+      player.pause();
+    }
+  }
+
+  function seek(time: number) {
+    const player = videoRef.current;
+    if (!player) return;
+    player.currentTime = time;
+    setCurrentTime(time);
+  }
+
+  return (
+    <div className="relative h-full w-full min-w-0 overflow-hidden bg-cocoa">
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        playsInline
+        preload="metadata"
+        className="block h-full w-full max-w-full object-contain"
+        onClick={togglePlayback}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onLoadedMetadata={(event) => {
+          const nextDuration = event.currentTarget.duration;
+          setDuration(Number.isFinite(nextDuration) ? nextDuration : 0);
+        }}
+        aria-label="Generated marketing video"
+      />
+      <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-cocoa/85 px-3 py-2 text-white backdrop-blur-sm">
+        <button
+          type="button"
+          className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-full bg-white text-cocoa"
+          onClick={togglePlayback}
+          aria-label={isPlaying ? "Pause video" : "Play video"}
+        >
+          {isPlaying ? (
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+              <path d="M7 5h4v14H7zm6 0h4v14h-4z" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+              <path d="m8 5 11 7-11 7z" />
+            </svg>
+          )}
+        </button>
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          step="0.1"
+          value={Math.min(currentTime, duration || 0)}
+          disabled={!duration}
+          onChange={(event) => seek(Number(event.target.value))}
+          className="h-2 min-w-0 flex-1 cursor-pointer accent-blueberry disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Video timeline"
+        />
+        <span className="shrink-0 text-xs font-extrabold tabular-nums">
+          {formatVideoTime(currentTime)} / {formatVideoTime(duration)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function formatVideoTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
