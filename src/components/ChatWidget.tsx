@@ -7,7 +7,7 @@ import { useCartCount } from "./RootLayout";
 const ChatPanel = lazy(() => import("./ChatPanel"));
 
 /**
- * Floating "Ask Grandma" chat, shown on every page (customer site and admin).
+ * Floating "Ask Grandma" chat on the customer site (hidden on admin pages, see RootLayout).
  * Text chat plus a voice call with the ElevenLabs agent; see `useBakeryAgent`.
  */
 export function ChatWidget() {
