@@ -1,8 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router";
 import { isoDay, money, shortDate } from "../../../lib/format";
 import { supabase, type Tables } from "../../../lib/supabase";
-import { num, qty, toCents, useIngredients, useInvalidateLedger, useSuppliers } from "./shared";
+import PriceCheckPanel, { type OrderDraft } from "./PriceCheck";
+import { num, qty, restockAmount, toCents, useIngredients, useInvalidateLedger, useSuppliers } from "./shared";
 
 async function fetchOrders() {
   const { data, error } = await supabase
@@ -38,7 +40,20 @@ function nextDelivery(s: Tables<"suppliers"> | undefined) {
 
 export default function IngredientOrders() {
   const { data: orders = [], isLoading, error } = useQuery({ queryKey: ["supplier_orders"], queryFn: fetchOrders });
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<OrderDraft | true | null>(null);
+  // The running price check lives in the URL so a reload doesn't lose it.
+  const [params, setParams] = useSearchParams();
+  const checkId = params.get("check");
+  const [shopping, setShopping] = useState(!!checkId);
+  const setCheckId = (id: string | null) =>
+    setParams(
+      (p) => {
+        if (id) p.set("check", id);
+        else p.delete("check");
+        return p;
+      },
+      { replace: true },
+    );
 
   const open = orders
     .filter((o) => o.status === "ordered")
@@ -53,13 +68,46 @@ export default function IngredientOrders() {
           <p className="text-cinnamon">What you've ordered from suppliers, and what's arrived.</p>
         </div>
         {!creating && (
-          <button className="btn-primary" onClick={() => setCreating(true)}>
-            New order
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {!shopping && (
+              <button className="btn-blue" onClick={() => setShopping(true)}>
+                Check prices online
+              </button>
+            )}
+            <button className="btn-primary" onClick={() => setCreating(true)}>
+              New order
+            </button>
+          </div>
         )}
       </div>
 
-      {creating && <NewOrderForm onDone={() => setCreating(false)} />}
+      {creating ? (
+        <NewOrderForm
+          // A new draft (another store picked) starts a fresh form.
+          key={creating === true ? "blank" : creating.supplierId}
+          draft={creating === true ? undefined : creating}
+          onDone={(saved) => {
+            setCreating(null);
+            // Ordered from a price check: that check is done with.
+            if (saved && creating !== true) {
+              setShopping(false);
+              setCheckId(null);
+            }
+          }}
+        />
+      ) : (
+        shopping && (
+          <PriceCheckPanel
+            checkId={checkId}
+            setCheckId={setCheckId}
+            onOrder={setCreating}
+            onClose={() => {
+              setShopping(false);
+              setCheckId(null);
+            }}
+          />
+        )
+      )}
 
       {isLoading && <p className="text-cinnamon">Loading…</p>}
       {error && <p className="text-jam">Couldn't load orders: {error.message}</p>}
@@ -285,16 +333,16 @@ function ReceiveForm({ order, onDone }: { order: SupplierOrder; onDone: () => vo
 type Line = { ingredient_id: string; quantity: string; price: string };
 const emptyLine = (): Line => ({ ingredient_id: "", quantity: "", price: "" });
 
-function NewOrderForm({ onDone }: { onDone: () => void }) {
+function NewOrderForm({ draft, onDone }: { draft?: OrderDraft; onDone: (saved: boolean) => void }) {
   const invalidate = useInvalidateLedger();
   const { data: suppliers } = useSuppliers();
   const { data: ingredients } = useIngredients();
 
-  const [supplierId, setSupplierId] = useState("");
-  const [expectedOn, setExpectedOn] = useState("");
-  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [supplierId, setSupplierId] = useState(draft?.supplierId ?? "");
+  const [expectedOn, setExpectedOn] = useState(() => nextDelivery(suppliers?.find((s) => s.id === draft?.supplierId)));
+  const [lines, setLines] = useState<Line[]>(draft?.lines.length ? draft.lines : [emptyLine()]);
   const [paid, setPaid] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(draft?.notes ?? "");
 
   const ingredient = (id: string) => ingredients?.find((i) => i.id === id);
   // A blank price falls back to the last price paid.
@@ -322,7 +370,7 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
         .filter((i) => !lines.some((l) => l.ingredient_id === i.id))
         .map((i) => ({
           ingredient_id: i.id,
-          quantity: String(Math.ceil(Math.max(num(i.reorder_threshold) * 2 - num(i.quantity_on_hand), num(i.reorder_threshold)))),
+          quantity: String(restockAmount(i)),
           price: "",
         })),
     ]);
@@ -356,7 +404,7 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
     },
     onSuccess: () => {
       invalidate();
-      onDone();
+      onDone(true);
     },
   });
 
@@ -467,8 +515,8 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
         <button className="btn-primary flex-1" disabled={!supplierId || valid.length === 0 || create.isPending}>
           {create.isPending ? "Saving…" : "Save order"}
         </button>
-        <button type="button" className="btn-ghost" onClick={onDone}>
-          Cancel
+        <button type="button" className="btn-ghost" onClick={() => onDone(false)}>
+          {draft ? "Back to prices" : "Cancel"}
         </button>
       </div>
     </form>
