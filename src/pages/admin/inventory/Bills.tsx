@@ -79,7 +79,7 @@ function BillRow({ bill, today }: { bill: Bill; today: string }) {
           ? await supabase.from("supplier_orders").update({ paid_on: isoDay() }).eq("id", id)
           : bill.kind === "purchase"
             ? await supabase.from("inventory_transactions").update({ paid: true }).eq("id", id)
-            : await supabase.from("expenses").update({ paid: true }).eq("id", id);
+            : await supabase.from("expenses").update({ paid: true, paid_on: isoDay() }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -126,7 +126,7 @@ function AddBillForm({ onDone }: { onDone: () => void }) {
 
   const add = useMutation({
     mutationFn: async () => {
-      const { data: bill, error } = await supabase
+      const { error } = await supabase
         .from("expenses")
         .insert({
           description: form.description.trim() || null,
@@ -136,16 +136,11 @@ function AddBillForm({ onDone }: { onDone: () => void }) {
           is_recurring: !!form.recurrence,
           recurrence: form.recurrence || null,
           supplier_id: form.supplier_id || null,
-          paid: false,
-        })
-        .select("id")
-        .single();
+          // A repeating bill entered as paid schedules its next one (database trigger).
+          paid: form.paid,
+          paid_on: form.paid ? isoDay() : null,
+        });
       if (error) throw error;
-      // Paying goes through the update trigger so a repeating bill schedules its next one.
-      if (form.paid) {
-        const { error: payError } = await supabase.from("expenses").update({ paid: true }).eq("id", bill.id);
-        if (payError) throw payError;
-      }
     },
     onSuccess: () => {
       invalidate();

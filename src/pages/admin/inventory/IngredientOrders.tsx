@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { isoDay, money, shortDate } from "../../../lib/format";
 import { supabase, type Tables } from "../../../lib/supabase";
 import { num, qty, toCents, useIngredients, useInvalidateLedger, useSuppliers } from "./shared";
@@ -36,9 +36,38 @@ function nextDelivery(s: Tables<"suppliers"> | undefined) {
   return isoDay(d);
 }
 
+export type OrderDraft = {
+  supplier_id: string;
+  expected_on?: string;
+  lines: { ingredient_id: string; quantity: number; price?: string }[];
+};
+
+// Other pages (e.g. the B2B "Can we make it?" check) hand over a draft order this way.
+const DRAFT_KEY = "draft-supplier-order";
+function readDraft(): OrderDraft | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as OrderDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function IngredientOrders() {
   const { data: orders = [], isLoading, error } = useQuery({ queryKey: ["supplier_orders"], queryFn: fetchOrders });
-  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<OrderDraft | null>(readDraft);
+  const [creating, setCreating] = useState(!!draft);
+  // Use a handed-over draft once (cleared after mount, so StrictMode's double render still sees it).
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch {}
+  }, []);
+  const startDraft = (d: OrderDraft) => {
+    setDraft(d);
+    setCreating(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const open = orders
     .filter((o) => o.status === "ordered")
@@ -53,13 +82,22 @@ export default function IngredientOrders() {
           <p className="text-cinnamon">What you've ordered from suppliers, and what's arrived.</p>
         </div>
         {!creating && (
-          <button className="btn-primary" onClick={() => setCreating(true)}>
+          <button className="btn-primary" onClick={() => startDraft({ supplier_id: "", lines: [] })}>
             New order
           </button>
         )}
       </div>
 
-      {creating && <NewOrderForm onDone={() => setCreating(false)} />}
+      {creating && (
+        <NewOrderForm
+          key={JSON.stringify(draft)}
+          draft={draft}
+          onDone={() => {
+            setCreating(false);
+            setDraft(null);
+          }}
+        />
+      )}
 
       {isLoading && <p className="text-cinnamon">Loading…</p>}
       {error && <p className="text-jam">Couldn't load orders: {error.message}</p>}
@@ -71,7 +109,7 @@ export default function IngredientOrders() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {open.map((o) => (
-              <OrderCard key={o.id} order={o} />
+              <OrderCard key={o.id} order={o} onReorder={startDraft} />
             ))}
           </div>
         )}
@@ -82,7 +120,7 @@ export default function IngredientOrders() {
           <h3 className="eyebrow mb-3">Delivered & past orders</h3>
           <div className="grid gap-4 lg:grid-cols-2">
             {done.map((o) => (
-              <OrderCard key={o.id} order={o} />
+              <OrderCard key={o.id} order={o} onReorder={startDraft} />
             ))}
           </div>
         </section>
@@ -91,7 +129,7 @@ export default function IngredientOrders() {
   );
 }
 
-function OrderCard({ order }: { order: SupplierOrder }) {
+function OrderCard({ order, onReorder }: { order: SupplierOrder; onReorder: (d: OrderDraft) => void }) {
   const invalidate = useInvalidateLedger();
   const [receiving, setReceiving] = useState(false);
   const today = isoDay();
@@ -189,6 +227,23 @@ function OrderCard({ order }: { order: SupplierOrder }) {
                 Mark paid
               </button>
             )}
+            {order.status !== "ordered" && (
+              <button
+                className="btn-ghost flex-1"
+                onClick={() =>
+                  onReorder({
+                    supplier_id: order.supplier_id,
+                    lines: order.supplier_order_items.map((i) => ({
+                      ingredient_id: i.ingredient_id,
+                      quantity: num(i.quantity),
+                      price: ((num(i.quantity) * num(i.unit_cost_cents)) / 100).toFixed(2),
+                    })),
+                  })
+                }
+              >
+                Order again
+              </button>
+            )}
             {order.status === "ordered" && (
               <button
                 className="btn-ghost px-4 text-sm text-cinnamon"
@@ -222,6 +277,7 @@ function ReceiveForm({ order, onDone }: { order: SupplierOrder; onDone: () => vo
       const { error } = await supabase.rpc("receive_supplier_order", {
         p_order_id: order.id,
         p_lines: lines.map((l) => ({ item_id: l.item_id, quantity: Number(l.quantity) || 0, expires_on: l.expires_on || null })),
+        p_today: isoDay(),
       });
       if (error) throw error;
     },
@@ -285,14 +341,24 @@ function ReceiveForm({ order, onDone }: { order: SupplierOrder; onDone: () => vo
 type Line = { ingredient_id: string; quantity: string; price: string };
 const emptyLine = (): Line => ({ ingredient_id: "", quantity: "", price: "" });
 
-function NewOrderForm({ onDone }: { onDone: () => void }) {
+function NewOrderForm({ draft, onDone }: { draft: OrderDraft | null; onDone: () => void }) {
   const invalidate = useInvalidateLedger();
   const { data: suppliers } = useSuppliers();
   const { data: ingredients } = useIngredients();
 
-  const [supplierId, setSupplierId] = useState("");
-  const [expectedOn, setExpectedOn] = useState("");
-  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [supplierId, setSupplierId] = useState(draft?.supplier_id ?? "");
+  const [expectedOn, setExpectedOn] = useState(draft?.expected_on ?? "");
+  const [lines, setLines] = useState<Line[]>(
+    draft?.lines.length
+      ? draft.lines.map((l) => ({ ingredient_id: l.ingredient_id, quantity: String(l.quantity), price: l.price ?? "" }))
+      : [emptyLine()],
+  );
+  // A draft without a date (e.g. "Order again") gets the supplier's next delivery day once suppliers load.
+  const [dateFilled, setDateFilled] = useState(!!draft?.expected_on || !draft?.supplier_id);
+  if (!dateFilled && suppliers) {
+    setDateFilled(true);
+    setExpectedOn(nextDelivery(suppliers.find((s) => s.id === draft?.supplier_id)));
+  }
   const [paid, setPaid] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -329,30 +395,20 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
 
   const create = useMutation({
     mutationFn: async () => {
-      const { data: order, error } = await supabase
-        .from("supplier_orders")
-        .insert({
-          supplier_id: supplierId,
-          expected_on: expectedOn || null,
-          paid_on: paid ? isoDay() : null,
-          notes: notes.trim() || null,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-
-      const { error: itemsError } = await supabase.from("supplier_order_items").insert(
-        valid.map((l) => ({
-          order_id: order.id,
+      // One call so an order is never saved without its lines.
+      const { error } = await supabase.rpc("create_supplier_order", {
+        p_supplier_id: supplierId,
+        p_lines: valid.map((l) => ({
           ingredient_id: l.ingredient_id,
           quantity: num(l.quantity),
           unit_cost_cents: lineCents(l) / num(l.quantity),
         })),
-      );
-      if (itemsError) {
-        await supabase.from("supplier_orders").delete().eq("id", order.id);
-        throw itemsError;
-      }
+        p_expected_on: expectedOn || undefined,
+        p_paid_on: paid ? isoDay() : undefined,
+        p_notes: notes.trim() || undefined,
+        p_today: isoDay(),
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       invalidate();

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, type FormEvent } from "react";
 import { dateTime, money } from "../../lib/format";
 import { supabase, type Enums } from "../../lib/supabase";
+import Feasibility from "./orders/Feasibility";
 
 type Status = Enums<"order_status">;
 type Source = Enums<"order_source">;
@@ -350,6 +351,8 @@ function NewOrderForm({ onDone }: { onDone: () => void }) {
           + Add item
         </button>
       </div>
+
+      <Feasibility lines={validLines} pickupAt={pickupAt} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div>

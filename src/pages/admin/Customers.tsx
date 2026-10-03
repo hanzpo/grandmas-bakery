@@ -3,8 +3,12 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { date, money, timeAgo } from "../../lib/format";
 import { supabase, type Tables, type Views } from "../../lib/supabase";
 
+/** Loyalty reward: points pile up automatically (1 per $1), and this many buys the reward. */
+export const REWARD_POINTS = 100;
+export const REWARD_LABEL = "a free parfait";
+
 type CustomerStat = Views<"customer_stats">;
-type Filter = "all" | "b2b" | "regulars" | "lapsed";
+type Filter = "all" | "b2b" | "regulars" | "lapsed" | "reward";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -12,9 +16,12 @@ const isRegular = (c: CustomerStat) => (c.order_count ?? 0) >= 3;
 const isLapsed = (c: CustomerStat) =>
   !c.last_order_at || Date.now() - new Date(c.last_order_at).getTime() > THIRTY_DAYS_MS;
 
+const isRewardReady = (c: CustomerStat) => (c.loyalty_points ?? 0) >= REWARD_POINTS;
+
 const FILTERS: { key: Filter; label: string; test: (c: CustomerStat) => boolean }[] = [
   { key: "all", label: "Everyone", test: () => true },
   { key: "regulars", label: "Regulars (3+ orders)", test: isRegular },
+  { key: "reward", label: "Reward ready", test: isRewardReady },
   { key: "lapsed", label: "Haven't been in (30d)", test: isLapsed },
   { key: "b2b", label: "Businesses", test: (c) => !!c.is_b2b },
 ];
@@ -118,6 +125,9 @@ export default function Customers() {
                     <span className="tag ml-2 bg-blueberry-soft text-blueberry-depth">{c.organization || "B2B"}</span>
                   )}
                   {isRegular(c) && !c.is_b2b && <span className="tag ml-2 bg-butter text-cocoa">Regular</span>}
+                  {isRewardReady(c) && (
+                    <span className="tag ml-2 bg-pistachio-soft text-pistachio-depth">Reward ready</span>
+                  )}
                 </td>
                 <td className="text-cinnamon">
                   <div>{c.email}</div>
@@ -321,6 +331,30 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
     onSuccess: refresh,
   });
 
+  const redeem = useMutation({
+    mutationFn: async () => {
+      // Read the latest points so a stale screen can't redeem twice.
+      const { data: fresh, error: readError } = await supabase
+        .from("customers")
+        .select("loyalty_points, notes")
+        .eq("id", id)
+        .single();
+      if (readError) throw readError;
+      if (fresh.loyalty_points < REWARD_POINTS) throw new Error(`Not enough points yet (needs ${REWARD_POINTS}).`);
+      const day = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const line = `${day}: redeemed ${REWARD_LABEL}`;
+      const { error } = await supabase
+        .from("customers")
+        .update({
+          loyalty_points: fresh.loyalty_points - REWARD_POINTS,
+          notes: fresh.notes?.trim() ? `${fresh.notes.trim()}\n${line}` : line,
+        })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+  });
+
   if (!customer) {
     return (
       <Drawer title="Loading…" onClose={onClose}>
@@ -332,23 +366,37 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
   return (
     <Drawer title={customer.name} onClose={onClose}>
       <div className="space-y-6">
-        <section className="flex items-center justify-between rounded-3xl border-2 border-butter-depth bg-butter-soft p-5 shadow-[0_4px_0_var(--color-butter-depth)]">
-          <div>
-            <p className="eyebrow">Loyalty points</p>
-            <p className="text-4xl font-black text-cocoa">★ {customer.loyalty_points}</p>
+        <section className="space-y-4 rounded-3xl border-2 border-butter-depth bg-butter-soft p-5 shadow-[0_4px_0_var(--color-butter-depth)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="eyebrow">Loyalty points</p>
+              <p className="text-4xl font-black text-cocoa">★ {customer.loyalty_points}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[-10, -1, 1, 10].map((d) => (
+                <button
+                  key={d}
+                  className="btn-icon w-auto px-3 text-sm"
+                  disabled={adjustPoints.isPending}
+                  onClick={() => adjustPoints.mutate(d)}
+                >
+                  {d > 0 ? `+${d}` : d}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {[-10, -1, 1, 10].map((d) => (
-              <button
-                key={d}
-                className="btn-icon w-auto px-3 text-sm"
-                disabled={adjustPoints.isPending}
-                onClick={() => adjustPoints.mutate(d)}
-              >
-                {d > 0 ? `+${d}` : d}
-              </button>
-            ))}
-          </div>
+          <RewardProgress
+            points={customer.loyalty_points}
+            redeeming={redeem.isPending}
+            onRedeem={() => {
+              if (confirm(`Give ${customer.name} ${REWARD_LABEL}? This takes ${REWARD_POINTS} points off.`)) {
+                redeem.mutate();
+              }
+            }}
+          />
+          {(redeem.error || adjustPoints.error) && (
+            <p className="text-jam">{(redeem.error || adjustPoints.error)!.message}</p>
+          )}
         </section>
 
         <form
@@ -387,5 +435,41 @@ function CustomerPanel({ id, onClose }: { id: string; onClose: () => void }) {
         </section>
       </div>
     </Drawer>
+  );
+}
+
+function RewardProgress({
+  points,
+  redeeming,
+  onRedeem,
+}: {
+  points: number;
+  redeeming: boolean;
+  onRedeem: () => void;
+}) {
+  const ready = points >= REWARD_POINTS;
+  const toward = ready ? REWARD_POINTS : points;
+  const pct = Math.round((toward / REWARD_POINTS) * 100);
+  return (
+    <div className="space-y-3">
+      <div
+        className="h-4 overflow-hidden rounded-full border-2 border-butter-depth bg-white"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={REWARD_POINTS}
+        aria-valuenow={toward}
+        aria-label={`Points toward ${REWARD_LABEL}`}
+      >
+        <div className={`h-full ${ready ? "bg-pistachio" : "bg-butter"}`} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="font-extrabold">
+        {ready
+          ? `Reward ready! They can have ${REWARD_LABEL}.`
+          : `${REWARD_POINTS - points} more points until ${REWARD_LABEL} (${points} of ${REWARD_POINTS}).`}
+      </p>
+      <button className="btn-blue w-full" disabled={!ready || redeeming} onClick={onRedeem}>
+        {redeeming ? "Saving…" : `Redeem ${REWARD_LABEL}`}
+      </button>
+    </div>
   );
 }

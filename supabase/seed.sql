@@ -127,3 +127,29 @@ insert into supplier_order_items (id, order_id, ingredient_id, quantity, unit_co
 select receive_supplier_order('00000000-0000-0000-0000-00000000d002',
   '[{"item_id": "00000000-0000-0000-0000-00000000e002", "quantity": 2000, "expires_on": null},
     {"item_id": "00000000-0000-0000-0000-00000000e003", "quantity": 100, "expires_on": null}]');
+
+-- Taste poll: two fall candidates Grandma is deciding between (not on the menu yet).
+insert into products (id, slug, name, description, category, price_cents, is_active, in_taste_poll, sort_order, translations) values
+  ('00000000-0000-0000-0000-00000000c901', 'maple-pecan-parfait', 'Maple Pecan Parfait',
+   'Maple yogurt, candied pecans and cinnamon apples.', 'parfait', 900, false, true, 10,
+   '{"es": {"name": "Parfait de Arce y Nuez", "description": "Yogur de arce, nueces confitadas y manzanas con canela."},
+     "zh": {"name": "枫糖山核桃芭菲", "description": "枫糖酸奶、焦糖山核桃和肉桂苹果。"}}'),
+  ('00000000-0000-0000-0000-00000000c902', 'apple-crisp-parfait', 'Apple Crisp Parfait',
+   'Whipped cream, baked cinnamon apples and oat crumble.', 'parfait', 850, false, true, 11,
+   '{"es": {"name": "Parfait de Manzana Crujiente", "description": "Crema batida, manzanas horneadas con canela y crumble de avena."},
+     "zh": {"name": "苹果酥芭菲", "description": "鲜奶油、肉桂烤苹果和燕麦酥粒。"}}');
+
+insert into recipe_items (product_id, ingredient_id, quantity) values
+  ('00000000-0000-0000-0000-00000000c901', '00000000-0000-0000-0000-00000000b002', 150),
+  ('00000000-0000-0000-0000-00000000c901', '00000000-0000-0000-0000-00000000b004', 0.5),
+  ('00000000-0000-0000-0000-00000000c901', '00000000-0000-0000-0000-00000000b005', 30),
+  ('00000000-0000-0000-0000-00000000c901', '00000000-0000-0000-0000-00000000b008', 1),
+  ('00000000-0000-0000-0000-00000000c902', '00000000-0000-0000-0000-00000000b001', 60),
+  ('00000000-0000-0000-0000-00000000c902', '00000000-0000-0000-0000-00000000b004', 1),
+  ('00000000-0000-0000-0000-00000000c902', '00000000-0000-0000-0000-00000000b007', 2),
+  ('00000000-0000-0000-0000-00000000c902', '00000000-0000-0000-0000-00000000b008', 1);
+
+insert into flavor_votes (product_id, voter_hash)
+select '00000000-0000-0000-0000-00000000c901'::uuid, 'seed-' || n from generate_series(1, 14) n
+union all
+select '00000000-0000-0000-0000-00000000c902'::uuid, 'seed-' || n from generate_series(1, 9) n;

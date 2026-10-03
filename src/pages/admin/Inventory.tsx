@@ -305,24 +305,17 @@ type Lot = { id: string | null; ingredient_id: string | null; name: string | nul
 function ExpiringLot({ lot }: { lot: Lot }) {
   const invalidate = useInvalidateLedger();
   const [tossing, setTossing] = useState(false);
-  const [amount, setAmount] = useState(String(num(lot.quantity)));
+  const { data: ingredients } = useIngredients();
+  const onHand = ingredients?.find((i) => i.id === lot.ingredient_id)?.quantity_on_hand;
+  // Some of the lot may already be used, so never suggest throwing out more than is on the shelf.
+  const suggested = Math.max(0, Math.min(num(lot.quantity), onHand == null ? num(lot.quantity) : num(onHand)));
+  const [amount, setAmount] = useState("");
   const expired = lot.expires_on != null && lot.expires_on < isoDay();
 
   const close = useMutation({
+    // One database call: logs the spoilage and closes the lot together, and is safe to retry.
     mutationFn: async (spoiled: number) => {
-      if (spoiled > 0) {
-        const { error } = await supabase.from("inventory_transactions").insert({
-          ingredient_id: lot.ingredient_id!,
-          type: "spoilage",
-          quantity: -spoiled,
-          notes: `Spoiled lot, use by ${date(lot.expires_on)}`,
-        });
-        if (error) throw error;
-      }
-      const { error } = await supabase
-        .from("inventory_transactions")
-        .update({ lot_closed_at: new Date().toISOString() })
-        .eq("id", lot.id!);
+      const { error } = await supabase.rpc("close_lot", { p_lot_id: lot.id!, p_spoiled: spoiled });
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -358,6 +351,7 @@ function ExpiringLot({ lot }: { lot: Lot }) {
               step="any"
               min={0}
               required
+              max={onHand == null ? undefined : num(onHand)}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
@@ -370,7 +364,10 @@ function ExpiringLot({ lot }: { lot: Lot }) {
           <button className="btn-ghost px-4 py-2 text-sm" disabled={close.isPending} onClick={() => close.mutate(0)}>
             All used up
           </button>
-          <button className="btn-ghost px-4 py-2 text-sm text-jam" disabled={close.isPending} onClick={() => setTossing(true)}>
+          <button className="btn-ghost px-4 py-2 text-sm text-jam" disabled={close.isPending} onClick={() => {
+              setAmount(String(suggested));
+              setTossing(true);
+            }}>
             Threw some out
           </button>
         </div>
@@ -760,10 +757,17 @@ function Suppliers() {
   );
 }
 
+// Per-unit ingredient prices are often fractions of a cent (cream is ~0.9¢/ml), so money() would round them away.
+const perUnit = (cents: number) => (cents >= 100 ? money(cents) : `${Number(cents.toFixed(2))}¢`);
+
 function PriceComparison() {
+  const qc = useQueryClient();
+  const invalidate = useInvalidateLedger();
   const { data: ingredients } = useIngredients();
+  const { data: suppliers } = useSuppliers();
   const [ingredientId, setIngredientId] = useState("");
   const selected = ingredients?.find((i) => i.id === ingredientId);
+  const [quote, setQuote] = useState({ supplier_id: "", price: "", amount: "", effective_on: isoDay(), notes: "" });
 
   const { data: prices } = useQuery({
     queryKey: ["supplier_prices", ingredientId],
@@ -773,10 +777,36 @@ function PriceComparison() {
         .from("supplier_prices")
         .select("*, suppliers(name, is_local, lead_time_days)")
         .eq("ingredient_id", ingredientId)
-        .order("effective_on", { ascending: false });
+        .order("effective_on", { ascending: false })
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+  });
+
+  const addQuote = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("supplier_prices").insert({
+        ingredient_id: ingredientId,
+        supplier_id: quote.supplier_id,
+        price_cents: (Number(quote.price) * 100) / Number(quote.amount),
+        effective_on: quote.effective_on,
+        notes: quote.notes.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setQuote({ supplier_id: "", price: "", amount: "", effective_on: isoDay(), notes: "" });
+      qc.invalidateQueries({ queryKey: ["supplier_prices"] });
+    },
+  });
+
+  const makePreferred = useMutation({
+    mutationFn: async (supplierId: string) => {
+      const { error } = await supabase.from("ingredients").update({ preferred_supplier_id: supplierId }).eq("id", ingredientId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
   });
 
   // Rows are newest-first, so the first row seen per supplier is its latest quote.
@@ -786,11 +816,13 @@ function PriceComparison() {
   const cheapest = quotes[0]?.price_cents;
 
   return (
-    <section className="card">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+    <section className="card space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-extrabold">Compare supplier prices</h2>
-          <p className="text-sm text-cinnamon">Latest quote from each supplier.</p>
+          <p className="text-sm text-cinnamon">
+            Latest quote from each supplier. To see what a price change does to your menu, try it on Menu & Costs.
+          </p>
         </div>
         <select className="input max-w-xs" value={ingredientId} onChange={(e) => setIngredientId(e.target.value)}>
           <option value="">Pick an ingredient…</option>
@@ -803,42 +835,138 @@ function PriceComparison() {
       </div>
 
       {!ingredientId ? null : quotes.length === 0 ? (
-        <p className="text-cinnamon">No quotes recorded for this ingredient yet.</p>
+        <p className="text-cinnamon">No quotes recorded for this ingredient yet. Add one below.</p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Supplier</th>
-              <th>Price / {selected?.unit}</th>
-              <th>vs. what you pay now</th>
-              <th>Quoted</th>
-              <th>Lead time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quotes.map((q) => {
-              const isCheapest = q.price_cents === cheapest;
-              const diff = num(q.price_cents) - num(selected?.cost_per_unit_cents);
-              return (
-                <tr key={q.id} className={isCheapest ? "bg-pistachio-soft/60" : undefined}>
-                  <td className="font-extrabold">
-                    {q.suppliers?.name}
-                    {q.suppliers?.is_local && <span className="tag ml-2 bg-pistachio-soft text-pistachio-depth">Local</span>}
-                    {isCheapest && <span className="tag ml-2 bg-butter text-cocoa">Cheapest</span>}
-                  </td>
-                  <td>{money(num(q.price_cents))}</td>
-                  <td className={diff > 0 ? "text-jam" : diff < 0 ? "text-pistachio-depth" : "text-cinnamon"}>
-                    {diff === 0 ? "same" : `${diff > 0 ? "+" : "−"}${money(Math.abs(diff))}`}
-                  </td>
-                  <td className="text-cinnamon">{date(q.effective_on)}</td>
-                  <td className="text-cinnamon">
-                    {q.suppliers?.lead_time_days != null ? `${q.suppliers.lead_time_days}d` : "—"}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th>Price / {selected?.unit}</th>
+                <th>vs. what you pay now</th>
+                <th>Quoted</th>
+                <th>Lead time</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {quotes.map((q) => {
+                const isCheapest = q.price_cents === cheapest;
+                const isPreferred = selected?.preferred_supplier_id === q.supplier_id;
+                const diff = num(q.price_cents) - num(selected?.cost_per_unit_cents);
+                return (
+                  <tr key={q.id} className={isCheapest ? "bg-pistachio-soft/60" : undefined}>
+                    <td className="font-extrabold">
+                      {q.suppliers?.name}
+                      {q.suppliers?.is_local && <span className="tag ml-2 bg-pistachio-soft text-pistachio-depth">Local</span>}
+                      {isCheapest && <span className="tag ml-2 bg-butter text-cocoa">Cheapest</span>}
+                    </td>
+                    <td>{perUnit(num(q.price_cents))}</td>
+                    <td className={diff > 0 ? "text-jam" : diff < 0 ? "text-pistachio-depth" : "text-cinnamon"}>
+                      {Math.abs(diff) < 0.005 ? "same" : `${diff > 0 ? "+" : "−"}${perUnit(Math.abs(diff))}`}
+                    </td>
+                    <td className="text-cinnamon">{date(q.effective_on)}</td>
+                    <td className="text-cinnamon">
+                      {q.suppliers?.lead_time_days != null ? `${q.suppliers.lead_time_days}d` : "—"}
+                    </td>
+                    <td className="text-right">
+                      {isPreferred ? (
+                        <span className="tag bg-blueberry-soft text-blueberry-depth">Your usual</span>
+                      ) : (
+                        <button
+                          className="btn-ghost px-3 py-1.5 text-xs"
+                          disabled={makePreferred.isPending}
+                          onClick={() => makePreferred.mutate(q.supplier_id)}
+                        >
+                          Make usual
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {ingredientId && (
+        <form
+          className="space-y-3 rounded-2xl bg-dough p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addQuote.mutate();
+          }}
+        >
+          <h3 className="font-extrabold">Record a new quote for {selected?.name}</h3>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="label" htmlFor="quote-supplier">Supplier</label>
+              <select
+                id="quote-supplier"
+                className="input bg-white"
+                required
+                value={quote.supplier_id}
+                onChange={(e) => setQuote({ ...quote, supplier_id: e.target.value })}
+              >
+                <option value="">Choose…</option>
+                {suppliers?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label" htmlFor="quote-price">Price ($)</label>
+              <input
+                id="quote-price"
+                className="input bg-white"
+                type="number"
+                step="0.01"
+                min={0}
+                required
+                value={quote.price}
+                onChange={(e) => setQuote({ ...quote, price: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="quote-amount">For how much ({selected?.unit})</label>
+              <input
+                id="quote-amount"
+                className="input bg-white"
+                type="number"
+                step="any"
+                min={0}
+                required
+                placeholder={selected?.unit === "each" ? "e.g. 12" : "e.g. 1000"}
+                value={quote.amount}
+                onChange={(e) => setQuote({ ...quote, amount: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="quote-date">Quoted on</label>
+              <input
+                id="quote-date"
+                className="input bg-white"
+                type="date"
+                required
+                value={quote.effective_on}
+                onChange={(e) => setQuote({ ...quote, effective_on: e.target.value })}
+              />
+            </div>
+          </div>
+          {Number(quote.price) > 0 && Number(quote.amount) > 0 && (
+            <p className="text-sm font-bold text-cinnamon">
+              That's {perUnit((Number(quote.price) * 100) / Number(quote.amount))} per {selected?.unit}
+              {selected && ` (you pay ${perUnit(num(selected.cost_per_unit_cents))} now)`}.
+            </p>
+          )}
+          {addQuote.error && <p className="text-jam">{addQuote.error.message}</p>}
+          <button className="btn-blue" disabled={addQuote.isPending || !(Number(quote.amount) > 0)}>
+            {addQuote.isPending ? "Saving…" : "Save quote"}
+          </button>
+        </form>
       )}
     </section>
   );

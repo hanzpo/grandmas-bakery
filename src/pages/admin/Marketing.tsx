@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent } from "react";
 import { timeAgo } from "../../lib/format";
 import { supabase, type Enums, type Tables } from "../../lib/supabase";
+import { AudienceCards } from "./marketing/Audience";
 
 type Video = Tables<"ugc_videos">;
 
@@ -121,6 +122,8 @@ export default function Marketing() {
           </div>
         )}
       </section>
+
+      <AudienceCards />
     </div>
   );
 }

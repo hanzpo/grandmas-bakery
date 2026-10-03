@@ -100,4 +100,22 @@ export const ko: Messages = {
   chatSuggestMenu: "메뉴에 뭐가 있나요?",
   chatSuggestHours: "언제 문 여세요?",
   chatSuggestAllergens: "견과류 없는 것도 있나요?",
+
+  // Allergen filter & taste poll
+  avoiding: "피하고 싶은 재료가 있나요?",
+  avoidingHint: "누르면 해당 재료가 들어간 메뉴를 숨겨요.",
+  itemsHidden: "{n}개 숨김",
+  showAll: "모두 보기",
+  nothingLeft: "오늘 메뉴 중에는 해당 재료가 없는 메뉴가 없어요. 전화나 문자 주시면 도와드릴게요.",
+  traces: "모든 메뉴를 한 주방에서 굽기 때문에 미량이 섞일 수 있어요.",
+  pollEyebrow: "맛 투표",
+  pollTitle: "할머니의 다음 맛을 골라 주세요",
+  pollBody: "할머니가 새 레시피를 시험 중이에요. 주문하고 싶은 메뉴에 투표하면 1등 메뉴를 구워 드려요.",
+  vote: "투표",
+  voting: "투표 중…",
+  youVoted: "투표 완료",
+  pollThanks: "고마워요! 할머니가 투표를 세었어요.",
+  voteOne: "표",
+  voteMany: "표",
+  voteFailed: "투표가 전송되지 않았어요. 다시 해 볼까요?",
 };

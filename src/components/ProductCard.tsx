@@ -37,7 +37,7 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
         </div>
         {description && <p className="mt-0.5 line-clamp-2 text-sm leading-snug font-bold text-cinnamon">{description}</p>}
         <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
-          <p className="line-clamp-1 text-[11px] font-bold text-cinnamon">{allergenLine}</p>
+          <p className="text-xs leading-snug font-bold text-cinnamon">{allergenLine}</p>
           {onChange &&
             (quantity > 0 ? (
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-pistachio bg-pistachio-soft p-0.5">

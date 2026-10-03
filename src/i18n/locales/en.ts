@@ -108,6 +108,24 @@ export const en = {
   chatSuggestMenu: "What's on the menu?",
   chatSuggestHours: "When are you open?",
   chatSuggestAllergens: "Anything nut-free?",
+
+  // Allergen filter & taste poll
+  avoiding: "Avoiding something?",
+  avoidingHint: "Tap to hide anything that contains it.",
+  itemsHidden: "{n} hidden",
+  showAll: "Show all",
+  nothingLeft: "Nothing on today's menu is free of those. Call or text us and we'll help.",
+  traces: "Everything is baked in one kitchen, so traces are possible.",
+  pollEyebrow: "Taste poll",
+  pollTitle: "Help Grandma pick the next flavor",
+  pollBody: "Grandma is testing new recipes. Vote for the one you'd order, and she'll bake the winner.",
+  vote: "Vote",
+  voting: "Voting…",
+  youVoted: "You voted",
+  pollThanks: "Thanks! Grandma counted your vote.",
+  voteOne: "vote",
+  voteMany: "votes",
+  voteFailed: "That vote didn't go through. Try again?",
 };
 
 export type Messages = typeof en;

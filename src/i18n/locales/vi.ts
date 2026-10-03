@@ -100,4 +100,22 @@ export const vi: Messages = {
   chatSuggestMenu: "Thực đơn có gì?",
   chatSuggestHours: "Tiệm mở cửa lúc nào?",
   chatSuggestAllergens: "Có món nào không có hạt không?",
+
+  // Allergen filter & taste poll
+  avoiding: "Bạn cần tránh món gì?",
+  avoidingHint: "Chạm để ẩn các món có chứa thành phần đó.",
+  itemsHidden: "Đã ẩn {n} món",
+  showAll: "Hiện tất cả",
+  nothingLeft: "Hôm nay không có món nào không chứa những thành phần đó. Hãy gọi hoặc nhắn tin, chúng tôi sẽ giúp bạn.",
+  traces: "Mọi món đều được nướng chung một bếp nên có thể lẫn một lượng nhỏ.",
+  pollEyebrow: "Bình chọn hương vị",
+  pollTitle: "Giúp Bà chọn hương vị tiếp theo",
+  pollBody: "Bà đang thử công thức mới. Hãy bình chọn món bạn muốn đặt, Bà sẽ làm món thắng cuộc.",
+  vote: "Bình chọn",
+  voting: "Đang bình chọn…",
+  youVoted: "Bạn đã bình chọn",
+  pollThanks: "Cảm ơn! Bà đã ghi nhận phiếu của bạn.",
+  voteOne: "phiếu",
+  voteMany: "phiếu",
+  voteFailed: "Chưa gửi được phiếu. Thử lại nhé?",
 };

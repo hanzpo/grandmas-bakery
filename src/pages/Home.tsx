@@ -5,7 +5,9 @@ import { useSearchParams } from "react-router";
 import { BunBun } from "../components/illustrations";
 import { ProductCard } from "../components/ProductCard";
 import { useCartCount } from "../components/RootLayout";
+import { AllergenFilter, useAvoidedAllergens, withoutAllergens } from "../components/public/AllergenFilter";
 import { CATEGORY_ART, productArt, titleCase } from "../components/public/productArt";
+import { TastePoll } from "../components/public/TastePoll";
 import { CATEGORIES, CATEGORY_LABELS, localized, useI18n, type MessageKey } from "../i18n";
 import { money } from "../lib/format";
 import { useMenu, type MenuItem } from "../lib/menu";
@@ -51,6 +53,9 @@ export default function Home() {
   const [form, setForm] = useStoredState("checkout-form", { name: "", email: "", phone: "", pickup_at: "", notes: "", marketing_opt_in: false });
 
   const items = menu.data ?? [];
+  // "Avoiding something?" chips: items with an avoided allergen drop out of the sections (not the cart).
+  const [avoid, setAvoid] = useAvoidedAllergens();
+  const shown = useMemo(() => withoutAllergens(items, avoid), [items, avoid]);
   // Kiosk sections: known categories in menu order, anything new after them.
   const sections = useMemo(() => {
     const rank = (c: string) => {
@@ -58,11 +63,11 @@ export default function Home() {
       return i === -1 ? CATEGORIES.length : i;
     };
     const groups = new Map<string, MenuItem[]>();
-    for (const p of items) groups.set(p.category, [...(groups.get(p.category) ?? []), p]);
+    for (const p of shown) groups.set(p.category, [...(groups.get(p.category) ?? []), p]);
     return [...groups]
       .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
       .map(([category, products]) => ({ category, products }));
-  }, [items]);
+  }, [shown]);
   const sectionLabel = (c: string) => CATEGORY_LABELS[lang][c] ?? titleCase(c);
   const lines = items.filter((p) => cart[p.id]).map((p) => ({ product: p, quantity: cart[p.id] }));
   const count = lines.reduce((s, l) => s + l.quantity, 0);
@@ -206,6 +211,7 @@ export default function Home() {
             {t("cancelled")}
           </div>
         )}
+        <AllergenFilter items={items} avoid={avoid} onChange={setAvoid} />
 
         <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[200px_minmax(0,1fr)_300px] lg:items-start">
           {/* Section rail: a sticky tab bar on phones, a sticky sidebar on large screens */}
@@ -378,6 +384,8 @@ export default function Home() {
           </>
         )}
       </section>
+
+      <TastePoll />
 
       {/* Features */}
       <section className="border-y-2 border-crumb bg-dough">
