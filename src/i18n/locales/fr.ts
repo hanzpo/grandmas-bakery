@@ -100,4 +100,22 @@ export const fr: Messages = {
   chatSuggestMenu: "Qu'y a-t-il au menu?",
   chatSuggestHours: "Quelles sont vos heures?",
   chatSuggestAllergens: "Quelque chose sans noix?",
+
+  // Allergen filter & taste poll
+  avoiding: "Vous évitez quelque chose ?",
+  avoidingHint: "Touchez pour masquer ce qui en contient.",
+  itemsHidden: "{n} masqués",
+  showAll: "Tout afficher",
+  nothingLeft: "Rien au menu aujourd'hui n'en est exempt. Appelez-nous ou écrivez-nous, on vous aidera.",
+  traces: "Tout est cuit dans la même cuisine, des traces sont donc possibles.",
+  pollEyebrow: "Sondage gourmand",
+  pollTitle: "Aidez Grand-maman à choisir la prochaine saveur",
+  pollBody: "Grand-maman teste de nouvelles recettes. Votez pour celle que vous commanderiez, et elle préparera la gagnante.",
+  vote: "Voter",
+  voting: "Vote en cours…",
+  youVoted: "Vous avez voté",
+  pollThanks: "Merci ! Grand-maman a compté votre vote.",
+  voteOne: "vote",
+  voteMany: "votes",
+  voteFailed: "Votre vote n'est pas passé. Réessayer ?",
 };

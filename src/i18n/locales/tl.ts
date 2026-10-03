@@ -100,4 +100,22 @@ export const tl: Messages = {
   chatSuggestMenu: "Ano ang nasa menu?",
   chatSuggestHours: "Kailan kayo bukas?",
   chatSuggestAllergens: "May wala bang mani?",
+
+  // Allergen filter & taste poll
+  avoiding: "May iniiwasan ka ba?",
+  avoidingHint: "I-tap para itago ang anumang mayroon nito.",
+  itemsHidden: "{n} nakatago",
+  showAll: "Ipakita lahat",
+  nothingLeft: "Lahat ng nasa menu ngayon ay may ganyan. Tumawag o mag-text sa amin at tutulungan ka namin.",
+  traces: "Iisang kusina ang pinagluluto ng lahat, kaya posibleng may bakas.",
+  pollEyebrow: "Botohan sa lasa",
+  pollTitle: "Tulungan si Lola na pumili ng susunod na lasa",
+  pollBody: "Sinusubukan ni Lola ang mga bagong recipe. Iboto ang gusto mong i-order, at lulutuin niya ang mananalo.",
+  vote: "Bumoto",
+  voting: "Bumoboto…",
+  youVoted: "Nakaboto ka na",
+  pollThanks: "Salamat! Nabilang na ni Lola ang boto mo.",
+  voteOne: "boto",
+  voteMany: "boto",
+  voteFailed: "Hindi pumasok ang boto mo. Subukan ulit?",
 };

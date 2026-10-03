@@ -100,4 +100,22 @@ export const zh: Messages = {
   chatSuggestMenu: "菜单上有什么？",
   chatSuggestHours: "营业时间是？",
   chatSuggestAllergens: "有不含坚果的吗？",
+
+  // Allergen filter & taste poll
+  avoiding: "需要避开什么吗？",
+  avoidingHint: "点一下，隐藏含有该成分的商品。",
+  itemsHidden: "已隐藏 {n} 件",
+  showAll: "显示全部",
+  nothingLeft: "今天的菜单都含有这些成分。欢迎来电或发短信，我们帮您看看。",
+  traces: "所有点心都在同一个厨房烘焙，可能含有微量过敏原。",
+  pollEyebrow: "口味投票",
+  pollTitle: "帮奶奶选下一个口味",
+  pollBody: "奶奶正在试做新配方。投给您想点的那款，她会做出得票最多的口味。",
+  vote: "投票",
+  voting: "投票中…",
+  youVoted: "已投票",
+  pollThanks: "谢谢！奶奶已记下您的一票。",
+  voteOne: "票",
+  voteMany: "票",
+  voteFailed: "投票没有成功，再试一次？",
 };

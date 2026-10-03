@@ -51,6 +51,42 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_closeouts: {
+        Row: {
+          card_counted_cents: number | null
+          card_expected_cents: number
+          cash_counted_cents: number | null
+          cash_expected_cents: number
+          closed_at: string
+          closed_by: string | null
+          day: string
+          notes: string | null
+          online_cents: number
+        }
+        Insert: {
+          card_counted_cents?: number | null
+          card_expected_cents?: number
+          cash_counted_cents?: number | null
+          cash_expected_cents?: number
+          closed_at?: string
+          closed_by?: string | null
+          day: string
+          notes?: string | null
+          online_cents?: number
+        }
+        Update: {
+          card_counted_cents?: number | null
+          card_expected_cents?: number
+          cash_counted_cents?: number | null
+          cash_expected_cents?: number
+          closed_at?: string
+          closed_by?: string | null
+          day?: string
+          notes?: string | null
+          online_cents?: number
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount_cents: number
@@ -63,6 +99,7 @@ export type Database = {
           paid: boolean
           paid_on: string | null
           recurrence: string | null
+          series_id: string | null
           supplier_id: string | null
         }
         Insert: {
@@ -76,6 +113,7 @@ export type Database = {
           paid?: boolean
           paid_on?: string | null
           recurrence?: string | null
+          series_id?: string | null
           supplier_id?: string | null
         }
         Update: {
@@ -89,6 +127,7 @@ export type Database = {
           paid?: boolean
           paid_on?: string | null
           recurrence?: string | null
+          series_id?: string | null
           supplier_id?: string | null
         }
         Relationships: [
@@ -98,6 +137,49 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      flavor_votes: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          voter_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          voter_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          voter_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flavor_votes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flavor_votes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_costs"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "flavor_votes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "product_sales"
+            referencedColumns: ["product_id"]
           },
         ]
       }
@@ -402,6 +484,7 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          in_taste_poll: boolean
           is_active: boolean
           is_flavor_of_month: boolean
           name: string
@@ -416,6 +499,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          in_taste_poll?: boolean
           is_active?: boolean
           is_flavor_of_month?: boolean
           name: string
@@ -430,6 +514,7 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          in_taste_poll?: boolean
           is_active?: boolean
           is_flavor_of_month?: boolean
           name?: string
@@ -1121,6 +1206,35 @@ export type Database = {
       }
     }
     Functions: {
+      close_lot: {
+        Args: { p_lot_id: string; p_spoiled?: number }
+        Returns: undefined
+      }
+      create_supplier_order: {
+        Args: {
+          p_expected_on?: string
+          p_lines: Json
+          p_notes?: string
+          p_paid_on?: string
+          p_supplier_id: string
+          p_today?: string
+        }
+        Returns: string
+      }
+      get_flavor_poll: {
+        Args: never
+        Returns: {
+          allergens: string[]
+          category: string
+          description: string
+          id: string
+          name: string
+          price_cents: number
+          slug: string
+          translations: Json
+          votes: number
+        }[]
+      }
       get_menu: {
         Args: never
         Returns: {
@@ -1137,10 +1251,15 @@ export type Database = {
         }[]
       }
       is_staff: { Args: never; Returns: boolean }
+      next_due_date: {
+        Args: { anchor: string; d: string; recurrence: string }
+        Returns: string
+      }
       receive_supplier_order: {
-        Args: { p_lines: Json; p_order_id: string }
+        Args: { p_lines: Json; p_order_id: string; p_today?: string }
         Returns: undefined
       }
+      vote_for_flavor: { Args: { p_product_id: string }; Returns: undefined }
     }
     Enums: {
       ingredient_unit: "g" | "kg" | "ml" | "l" | "each" | "dozen" | "lb" | "oz"
