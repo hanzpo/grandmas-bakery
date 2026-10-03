@@ -129,7 +129,7 @@ function VideoCard({ video, onRemove, onRetry }: { video: Video; onRemove: () =>
   const status = STATUS[video.status];
   return (
     <article className="card flex min-w-0 flex-col gap-3">
-      <div className="grid aspect-[9/16] max-h-[32rem] w-full min-w-0 place-items-center overflow-hidden rounded-2xl bg-dough">
+      <div className="grid aspect-[9/16] w-full min-w-0 place-items-center overflow-hidden rounded-2xl bg-dough">
         {video.status === "ready" && video.video_url ? (
           <VideoPlayer
             src={video.video_url}
