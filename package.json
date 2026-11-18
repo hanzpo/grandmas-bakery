@@ -8,6 +8,7 @@
     "preview": "vite build && vite preview",
     "deploy": "vite build && wrangler deploy",
     "typecheck": "tsc -b",
+    "test": "vitest run",
     "cf-typegen": "wrangler types worker/worker-configuration.d.ts",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
@@ -36,6 +37,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
+    "vitest": "^5.0.5",
     "wrangler": "^4.146.0"
   },
   "packageManager": "pnpm@12.5.1"
