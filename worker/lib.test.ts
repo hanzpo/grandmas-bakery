@@ -59,10 +59,12 @@ describe("upsertCustomer", () => {
     expect(rows.find((r) => r.id === id)).toMatchObject({ email: "ann@example.com", phone: null });
   });
 
-  it("links a phone-only customer and remembers their email", async () => {
+  it("never links an emailed checkout to a phone-only customer, or rewrites that record", async () => {
     const rows = seed();
-    expect(await upsertCustomer(fakeDb(rows), { name: "Pat", email: "pat@example.com", phone: "555-0300" })).toBe("walkin");
-    expect(rows.find((r) => r.id === "walkin")?.email).toBe("pat@example.com");
+    const id = await upsertCustomer(fakeDb(rows), { name: "Pat", email: "pat@example.com", phone: "555-0300", marketing_opt_in: true });
+    expect(id).not.toBe("walkin");
+    expect(rows.find((r) => r.id === "walkin")).toMatchObject({ email: null, marketing_opt_in: false });
+    expect(rows.find((r) => r.id === id)).toMatchObject({ email: "pat@example.com", phone: null });
   });
 
   it("finds a returning customer whose phone has punctuation in it", async () => {

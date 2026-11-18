@@ -15,8 +15,9 @@ export function stripe(env: Env) {
 }
 
 /**
- * Find a customer by email, then by phone, or create one. The email wins: it's where Stripe
- * sends the receipt, so a phone already on someone else's record never takes the order.
+ * Find a customer by email (or by phone when there's no email, e.g. voice orders), or create
+ * one. Checkout is unauthenticated, so a phone already on file never links an emailed order to
+ * that record (or rewrites it): the order gets its own customer, without the phone (it's unique).
  */
 export async function upsertCustomer(
   db: ReturnType<typeof adminDb>,
@@ -25,30 +26,21 @@ export async function upsertCustomer(
   const email = c.email?.trim().toLowerCase() || null;
   let phone = c.phone?.trim() || null;
   const find = async (column: "email" | "phone", value: string) => {
-    const { data, error } = await db.from("customers").select("id, email").eq(column, value).maybeSingle();
+    const { data, error } = await db.from("customers").select("id").eq(column, value).maybeSingle();
     if (error) throw error;
     return data;
   };
 
-  let existing = email ? await find("email", email) : null;
-  if (!existing && phone) {
-    const byPhone = await find("phone", phone);
-    if (byPhone && (!email || !byPhone.email)) existing = byPhone;
-    else if (byPhone) phone = null; // someone else's number: keep it off the new record (phone is unique)
-  }
+  const existing = email ? await find("email", email) : phone ? await find("phone", phone) : null;
   if (existing) {
-    const patch = {
-      // A returning customer ticking "send me specials" subscribes them (never unsubscribes).
-      ...(c.marketing_opt_in && { marketing_opt_in: true }),
-      // A phone-only customer (e.g. from a phone order) ordering online: remember their email.
-      ...(email && !existing.email && { email }),
-    };
-    if (Object.keys(patch).length) {
-      const { error } = await db.from("customers").update(patch).eq("id", existing.id);
+    // A returning customer ticking "send me specials" subscribes them (never unsubscribes).
+    if (c.marketing_opt_in) {
+      const { error } = await db.from("customers").update({ marketing_opt_in: true }).eq("id", existing.id);
       if (error) throw error;
     }
     return existing.id;
   }
+  if (email && phone && (await find("phone", phone))) phone = null;
   const { data, error } = await db
     .from("customers")
     .insert({ name: c.name, email, phone, marketing_opt_in: c.marketing_opt_in ?? false })
