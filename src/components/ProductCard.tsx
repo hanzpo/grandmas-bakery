@@ -1,4 +1,5 @@
 import { ALLERGEN_LABELS, localized, useI18n } from "../i18n";
+import { MAX_ITEM_QUANTITY } from "../../shared/order";
 import { money } from "../lib/format";
 import type { MenuItem } from "../lib/menu";
 import { productArt } from "./public/productArt";
@@ -43,7 +44,7 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
               <div className="flex shrink-0 items-center gap-1 rounded-full border-2 border-pistachio bg-pistachio-soft p-0.5">
                 <button type="button" aria-label={t("removeOne")} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity - 1)}>−</button>
                 <span className="w-5 text-center font-black text-pistachio-depth">{quantity}</span>
-                <button type="button" aria-label={t("addOne")} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black" onClick={() => onChange(quantity + 1)}>+</button>
+                <button type="button" aria-label={t("addOne")} disabled={quantity >= MAX_ITEM_QUANTITY} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg font-black disabled:opacity-40" onClick={() => onChange(quantity + 1)}>+</button>
               </div>
             ) : (
               <button
@@ -89,7 +90,8 @@ export function ProductCard({ item, index = 0, quantity = 0, onChange }: Props) 
             <button
               type="button"
               aria-label={t("addOne")}
-              className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white text-xl font-black text-cocoa"
+              disabled={quantity >= MAX_ITEM_QUANTITY}
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white text-xl font-black text-cocoa disabled:opacity-40"
               onClick={() => onChange(quantity + 1)}
             >
               +

@@ -26,6 +26,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - run: pnpm test
       - run: pnpm vite build
         env:
           VITE_SUPABASE_URL: https://${{ env.SUPABASE_PROJECT_REF }}.supabase.co

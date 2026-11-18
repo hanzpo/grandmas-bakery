@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { MiddlewareHandler } from "hono";
 import Stripe from "stripe";
 import type { Database } from "../shared/database.types";
 
@@ -13,21 +14,40 @@ export function stripe(env: Env) {
   return new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
 }
 
-/** Find a customer by email/phone, or create one. */
+/**
+ * Find a customer by email, then by phone, or create one. The email wins: it's where Stripe
+ * sends the receipt, so a phone already on someone else's record never takes the order.
+ */
 export async function upsertCustomer(
   db: ReturnType<typeof adminDb>,
   c: { name: string; email?: string | null; phone?: string | null; marketing_opt_in?: boolean },
 ) {
   const email = c.email?.trim().toLowerCase() || null;
-  const phone = c.phone?.trim() || null;
-  if (email || phone) {
-    const filter = [email && `email.eq.${email}`, phone && `phone.eq.${phone}`].filter(Boolean).join(",");
-    const { data: existing } = await db.from("customers").select("id").or(filter).limit(1).maybeSingle();
-    if (existing) {
+  let phone = c.phone?.trim() || null;
+  const find = async (column: "email" | "phone", value: string) => {
+    const { data, error } = await db.from("customers").select("id, email").eq(column, value).maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+
+  let existing = email ? await find("email", email) : null;
+  if (!existing && phone) {
+    const byPhone = await find("phone", phone);
+    if (byPhone && (!email || !byPhone.email)) existing = byPhone;
+    else if (byPhone) phone = null; // someone else's number: keep it off the new record (phone is unique)
+  }
+  if (existing) {
+    const patch = {
       // A returning customer ticking "send me specials" subscribes them (never unsubscribes).
-      if (c.marketing_opt_in) await db.from("customers").update({ marketing_opt_in: true }).eq("id", existing.id);
-      return existing.id;
+      ...(c.marketing_opt_in && { marketing_opt_in: true }),
+      // A phone-only customer (e.g. from a phone order) ordering online: remember their email.
+      ...(email && !existing.email && { email }),
+    };
+    if (Object.keys(patch).length) {
+      const { error } = await db.from("customers").update(patch).eq("id", existing.id);
+      if (error) throw error;
     }
+    return existing.id;
   }
   const { data, error } = await db
     .from("customers")
@@ -69,3 +89,19 @@ export function authorized(expected: string | undefined, got: string | undefined
   for (let i = 0; i < a.byteLength; i++) diff |= a[i]! ^ b[i]!;
   return diff === 0;
 }
+
+/** Supabase errors are plain objects, not `Error`s; Hono's onError only handles `Error`s. */
+export function toError(e: unknown) {
+  if (e instanceof Error) return e;
+  const message = typeof e === "object" && e && "message" in e ? String(e.message) : String(e);
+  return new Error(message);
+}
+
+/** Rethrow anything that isn't an Error (e.g. a Supabase error) as one, so onError answers JSON. */
+export const normalizeErrors: MiddlewareHandler = async (_c, next) => {
+  try {
+    await next();
+  } catch (e) {
+    throw toError(e);
+  }
+};

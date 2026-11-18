@@ -1,16 +1,23 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { MAX_ITEM_QUANTITY } from "../../shared/order";
 import { adminDb, priceItems, stripe, upsertCustomer } from "../lib";
 
-const CheckoutBody = z.object({
+// A minute of slack so a pickup picked for "now" survives the trip to the server.
+const PICKUP_SLACK_MS = 60_000;
+
+export const CheckoutBody = z.object({
   customer: z.object({
-    name: z.string().min(1).max(100),
+    name: z.string().trim().min(1).max(100),
     email: z.email(),
-    phone: z.string().max(30).optional(),
+    phone: z.string().trim().max(30).optional(),
     marketing_opt_in: z.boolean().optional(),
   }),
-  items: z.array(z.object({ product_id: z.guid(), quantity: z.number().int().min(1).max(100) })).min(1),
-  pickup_at: z.iso.datetime({ offset: true }).optional(),
+  items: z.array(z.object({ product_id: z.guid(), quantity: z.number().int().min(1).max(MAX_ITEM_QUANTITY) })).min(1),
+  pickup_at: z.iso
+    .datetime({ offset: true })
+    .refine((at) => Date.parse(at) > Date.now() - PICKUP_SLACK_MS, "Pickup time must be in the future")
+    .optional(),
   notes: z.string().max(500).optional(),
 });
 

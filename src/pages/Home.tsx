@@ -7,6 +7,7 @@ import { ProductCard } from "../components/ProductCard";
 import { useCartCount } from "../components/RootLayout";
 import { CATEGORY_ART, productArt, titleCase } from "../components/public/productArt";
 import { CATEGORIES, CATEGORY_LABELS, localized, useI18n, type MessageKey } from "../i18n";
+import { cartLines, localDateTimeInput, setQuantity, type Cart } from "../lib/cart";
 import { money } from "../lib/format";
 import { useMenu, type MenuItem } from "../lib/menu";
 
@@ -44,7 +45,7 @@ export default function Home() {
   const [active, setActive] = useState("");
   const railRef = useRef<HTMLElement>(null);
   // Cart + details survive the round trip to Stripe (and reloads).
-  const [cart, setCart] = useStoredState<Record<string, number>>("cart", {});
+  const [cart, setCart] = useStoredState<Cart>("cart", {});
   const [step, setStep] = useState<"cart" | "details">("cart");
   // Phones/tablets: the cart opens as a bottom sheet instead of living at the end of the menu.
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -64,19 +65,20 @@ export default function Home() {
       .map(([category, products]) => ({ category, products }));
   }, [items]);
   const sectionLabel = (c: string) => CATEGORY_LABELS[lang][c] ?? titleCase(c);
-  const lines = items.filter((p) => cart[p.id]).map((p) => ({ product: p, quantity: cart[p.id] }));
-  const count = lines.reduce((s, l) => s + l.quantity, 0);
-  const total = lines.reduce((s, l) => s + l.product.price_cents * l.quantity, 0);
+  const { lines, count, total } = cartLines(items, cart);
 
   useEffect(() => setCount(count), [count, setCount]);
-  // Back from a cancelled Stripe checkout on a phone: reopen the order sheet.
+  // Back from a cancelled Stripe checkout on a phone: reopen the order sheet once the menu
+  // (and so the cart) has loaded.
+  const reopenAfterCancel = useRef(Boolean(params.get("cancelled")));
   useEffect(() => {
-    if (params.get("cancelled") && count > 0 && !window.matchMedia("(min-width: 64rem)").matches) setSheetOpen(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!reopenAfterCancel.current || !menu.isSuccess) return;
+    reopenAfterCancel.current = false;
+    if (count > 0 && !window.matchMedia("(min-width: 64rem)").matches) setSheetOpen(true);
+  }, [menu.isSuccess, count]);
   useEffect(() => {
-    if (count === 0) setSheetOpen(false);
-  }, [count]);
+    if (menu.isSuccess && count === 0) setSheetOpen(false);
+  }, [menu.isSuccess, count]);
   // The header's Cart button links to #cart; on phones that means "open the sheet".
   useEffect(() => {
     const open = () => {
@@ -101,8 +103,8 @@ export default function Home() {
     };
   }, [sheetOpen]);
   useEffect(() => {
-    if (count === 0) setStep("cart");
-  }, [count]);
+    if (menu.isSuccess && count === 0) setStep("cart");
+  }, [menu.isSuccess, count]);
 
   // Highlight the section being read: the last one whose top has passed the sticky header (+ tab bar on phones).
   useEffect(() => {
@@ -138,7 +140,7 @@ export default function Home() {
     document.getElementById(`section-${category}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const setQty = (id: string, q: number) => setCart(({ [id]: _, ...rest }) => (q > 0 ? { ...rest, [id]: q } : rest));
+  const setQty = (id: string, q: number) => setCart((c) => setQuantity(c, id, q));
 
   const checkout = useMutation({
     mutationFn: async () => {
@@ -146,13 +148,14 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: { name: form.name, email: form.email, phone: form.phone || undefined, marketing_opt_in: form.marketing_opt_in },
+          customer: { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() || undefined, marketing_opt_in: form.marketing_opt_in },
           items: lines.map((l) => ({ product_id: l.product.id, quantity: l.quantity })),
           pickup_at: form.pickup_at ? new Date(form.pickup_at).toISOString() : undefined,
           notes: form.notes || undefined,
         }),
       });
-      const body = (await res.json()) as { url?: string; error?: string };
+      // A gateway/runtime failure can answer with an HTML page; don't show its parse error.
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (!res.ok || !body.url) throw new Error(body.error ?? t("checkoutFailed"));
       return body.url;
     },
@@ -330,6 +333,8 @@ export default function Home() {
                       required={required}
                       placeholder={placeholder}
                       autoComplete={autoComplete}
+                      pattern={key === "name" ? ".*\\S.*" : undefined}
+                      min={key === "pickup_at" ? localDateTimeInput() : undefined}
                       className="input"
                       value={form[key]}
                       onChange={(e) => setForm({ ...form, [key]: e.target.value })}
